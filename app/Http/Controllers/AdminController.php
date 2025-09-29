@@ -71,19 +71,41 @@ class AdminController extends Controller
         }
 
 
-        public function approveMember($id)
+        public function approveMember(Request $request, $id)
         {
             $member = User::findOrFail($id);
 
-            // 1) Update status & token
+            // Optional validation (unobtrusive): ensure approved_at is a valid date if provided
+            $request->validate([
+                'approved_at' => 'nullable|date',
+                'approve_notes' => 'nullable|string|max:1000',
+            ]);
+
+            // Use provided approved_at or default to now()
+            $approvedAt = $request->input('approved_at')
+                ? Carbon::parse($request->input('approved_at'))->startOfDay()
+                : now();
+
+            // 1) Update status & date_approved & token (keep your naming: date_approved)
             $member->status = 'Active';
-            $member->date_approved = now();
-            $member->email_verification_token = \Illuminate\Support\Str::random(64);
+            $member->date_approved = $approvedAt;
+            $member->email_verification_token = Str::random(64);
+
+            // Optional notes
+            if ($request->filled('approve_notes')) {
+                // Ensure you have a column to store notes (approve_notes). If not, remove this.
+                $member->approve_notes = $request->input('approve_notes');
+            }
+
             $member->save();
 
             // 2) Render your Blade email (MATCH the filename you created)
-            // If your file is emails/member_approved.blade.php, use 'emails.member_approved'
-            $html = view('emails.member-approved', compact('member'))->render();
+            try {
+                $html = view('emails.member-approved', compact('member'))->render();
+            } catch (\Throwable $e) {
+                Log::error('Failed to render member-approved email view', ['err' => $e->getMessage()]);
+                return back()->with('error', 'Failed to prepare approval email.');
+            }
 
             // 3) Build Brevo payload
             $payload = [
@@ -99,7 +121,8 @@ class AdminController extends Controller
             // 4) OPTIONAL: attach PDF (try in-memory dompdf; fallback: skip cleanly)
             try {
                 if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.member', compact('member')); // create this view if you want a pdf layout
+                    // If your pdf view relies on the approval date make sure it reads $member->date_approved
+                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.member', compact('member'));
                     $pdfContent = base64_encode($pdf->output());
                     $payload['attachment'] = [[
                         'name'    => "member-{$member->id}.pdf",
@@ -114,14 +137,19 @@ class AdminController extends Controller
             }
 
             // 5) Send via Brevo HTTP API
-            $resp = Http::withHeaders([
-                'api-key'      => env('BREVO_API_KEY'),
-                'accept'       => 'application/json',
-                'content-type' => 'application/json',
-            ])->post('https://api.brevo.com/v3/smtp/email', $payload);
+            try {
+                $resp = Http::withHeaders([
+                    'api-key'      => env('BREVO_API_KEY'),
+                    'accept'       => 'application/json',
+                    'content-type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', $payload);
 
-            if (!$resp->successful()) {
-                Log::error('Brevo API send failed', ['status' => $resp->status(), 'body' => $resp->body()]);
+                if (!$resp->successful()) {
+                    Log::error('Brevo API send failed', ['status' => $resp->status(), 'body' => $resp->body()]);
+                    return back()->with('error', 'Email send failed.');
+                }
+            } catch (\Throwable $e) {
+                Log::error('Brevo API request failed', ['err' => $e->getMessage()]);
                 return back()->with('error', 'Email send failed.');
             }
 
