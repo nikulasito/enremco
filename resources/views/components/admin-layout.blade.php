@@ -94,20 +94,20 @@
                                     <i class="fa-solid fa-money-bill-transfer"></i> Withdraw
                                 </a>
                             </li>
-                            <!-- <li class="nav-item">
+                            <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.loan-payments') ? 'active' : '' }}" href="{{ route('admin.loan-payments') }}">
                                     <i class="fa-solid fa-hand-holding-dollar"></i> Loan Payments
                                 </a>
-                            </li> -->
+                            </li>
                         </ul>
                     </div>
                 </li>
                 <hr class="sidebar-divider">
-                <!-- <li class="nav-item">
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.loans') ? 'active' : '' }}" href="{{ route('admin.loans') }}">
                         <i class="fa-solid fa-list-check"></i> Loan Details
                     </a>
-                </li> -->
+                </li>
                 </ul>
             </nav>
 

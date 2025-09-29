@@ -184,7 +184,7 @@ Route::post('/admin/upload-savings-template', [SavingsController::class, 'upload
 // Route::get('/admin/withdrawals', [AdminController::class, 'viewWithdrawals'])->name('admin.withdrawals');
 
 // Route::get('/admin/savings', [AdminController::class, 'savings']);
-// Route::get('/admin/loans', [AdminController::class, 'loans']);
+Route::get('/admin/loans', [AdminController::class, 'loans']);
 
 
 Route::get('/admin/new-members', [AdminController::class, 'newMembers'])->name('admin.new-members');
