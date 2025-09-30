@@ -9,6 +9,8 @@
     </a>
 </p>
 
-<p>Attached to this email are your registration details in PDF format for your records.</p>
+<p>Additionally, please visit the ENREMCO Office to complete the verification of your registration.</p>
 
-<p>If you did not register, please ignore this email.</p>
+<p>If you did not register, please disregard this email.</p>
+
+<p>From: ENREMCO Team</p>
