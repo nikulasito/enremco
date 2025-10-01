@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\SharesController;
@@ -184,7 +185,7 @@ Route::post('/admin/upload-savings-template', [SavingsController::class, 'upload
 // Route::get('/admin/withdrawals', [AdminController::class, 'viewWithdrawals'])->name('admin.withdrawals');
 
 // Route::get('/admin/savings', [AdminController::class, 'savings']);
-Route::get('/admin/loans', [AdminController::class, 'loans']);
+// Route::get('/admin/loans', [AdminController::class, 'loans']);
 
 
 Route::get('/admin/new-members', [AdminController::class, 'newMembers'])->name('admin.new-members');
@@ -299,6 +300,10 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
 
 
 Route::get('/user/pdf/{id}', [RegisteredUserController::class, 'generatePdf'])->name('user.pdf');
+
+
+
+
 
 
 require __DIR__.'/auth.php';

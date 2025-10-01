@@ -5,8 +5,6 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Dompdf\Dompdf;
 
 class RegistrationEmail extends Mailable
 {
@@ -24,10 +22,8 @@ class RegistrationEmail extends Mailable
     public function build()
     {
         return $this->subject('Your Registration Details')
-            ->view('emails.registration')
-            ->with(['member' => $this->member])
-            ->attachData($this->pdfContent, 'registration-details.pdf', [
-                'mime' => 'application/pdf',
-            ]);
+                    ->html(view('emails.registration', ['member' => $this->member])->render())
+                    ->text('emails.registration_plain') // optional plain text version
+                    ->with(['member' => $this->member]);
     }
 }

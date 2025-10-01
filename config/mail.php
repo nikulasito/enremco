@@ -99,6 +99,10 @@ return [
             'transport' => 'sendgrid',
         ],
 
+        'brevo' => [
+            'transport' => 'brevo',
+        ],
+
     ],
 
     /*
