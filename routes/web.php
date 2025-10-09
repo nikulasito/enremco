@@ -255,8 +255,6 @@ Route::match(['PUT', 'PATCH'], '/profile/update', [ProfileController::class, 'up
 
 Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-Route::match(['PUT', 'PATCH'], '/profile/update', [ProfileController::class, 'update'])->name('profile.update');
-
 Route::put('admin/inactivate-member/{id}', [AdminController::class, 'inactivateMember'])->name('admin.inactivate-member');
 Route::put('/admin/mark-as-active/{id}', [AdminController::class, 'markAsActive'])->name('admin.mark-as-active');
 

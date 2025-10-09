@@ -56,29 +56,29 @@
             <x-input-error :messages="$errors->get('position')" class="mt-2" />
         </div>
 
+
+        @php
+            // Prefer DB value unless old() exists for validation error case
+            $officeCurrent = session()->hasOldInput() ? old('office') : old('office', $user->office);
+            $sexCurrent = session()->hasOldInput() ? old('sex') : old('sex', $user->sex);
+            $msCurrent = session()->hasOldInput() ? old('marital_status') : old('marital_status', $user->marital_status);
+
+            // Normalize helper
+            $norm = fn($v) => trim(mb_strtolower((string) $v));
+        @endphp
+
         <!-- Office -->
         <div>
             <x-input-label for="office" :value="__('Office')" />
-            <select id="office" name="office" class="form-control" required>
-                <option value="" disabled selected>Select Office</option>
-                <option value="Department of Environment and Natural Resources" {{ old('office', $user->office) == 'Department of Environment and Natural Resources' ? 'selected' : '' }}>Department of Environment and Natural Resources</option>
-                <option value="Environmental Management Bureau" {{ old('office', $user->office) == 'Environmental Management Bureau' ? 'selected' : '' }}>Environmental Management Bureau</option>
-                <option value="Mines and Geosciences Bureau" {{ old('office', $user->office) == 'Mines and Geosciences Bureau' ? 'selected' : '' }}>Mines and Geosciences Bureau</option>
-                <option value="PENRO Bukidnon" {{ old('office', $user->office) == 'PENRO Bukidnon' ? 'selected' : '' }}>PENRO Bukidnon</option>
-                <option value="PENRO Camiguin" {{ old('office', $user->office) == 'PENRO Camiguin' ? 'selected' : '' }}>PENRO Camiguin</option>
-                <option value="PENRO Lanao Del Norte" {{ old('office', $user->office) == 'PENRO Lanao Del Norte' ? 'selected' : '' }}>PENRO Lanao Del Norte</option>
-                <option value="PENRO Misamis Occidental" {{ old('office', $user->office) == 'PENRO Misamis Occidental' ? 'selected' : '' }}>PENRO Misamis Occidental</option>
-                <option value="PENRO Misamis Oriental" {{ old('office', $user->office) == 'PENRO Misamis Oriental' ? 'selected' : '' }}>PENRO Misamis Oriental</option>
-                <option value="CENRO Don Carlos" {{ old('office', $user->office) == 'CENRO Don Carlos' ? 'selected' : '' }}>CENRO Don Carlos</option>
-                <option value="CENRO Manolo Fortich" {{ old('office', $user->office) == 'CENRO Manolo Fortich' ? 'selected' : '' }}>CENRO Manolo Fortich</option>
-                <option value="CENRO Valencia" {{ old('office', $user->office) == 'CENRO Valencia' ? 'selected' : '' }}>CENRO Valencia</option>
-                <option value="CENRO Talakag" {{ old('office', $user->office) == 'CENRO Talakag' ? 'selected' : '' }}>CENRO Talakag</option>
-                <option value="CENRO Iligan" {{ old('office', $user->office) == 'CENRO Iligan' ? 'selected' : '' }}>CENRO Iligan</option>
-                <option value="CENRO Kolambugan" {{ old('office', $user->office) == 'CENRO Kolambugan' ? 'selected' : '' }}>CENRO Kolambugan</option>
-                <option value="CENRO Oroquieta" {{ old('office', $user->office) == 'CENRO Oroquieta' ? 'selected' : '' }}>CENRO Oroquieta</option>
-                <option value="CENRO Ozamis" {{ old('office', $user->office) == 'CENRO Ozamis' ? 'selected' : '' }}>CENRO Ozamis</option>
-                <option value="CENRO Gingoog" {{ old('office', $user->office) == 'CENRO Gingoog' ? 'selected' : '' }}>CENRO Gingoog</option>
-                <option value="CENRO Initao" {{ old('office', $user->office) == 'CENRO Initao' ? 'selected' : '' }}>CENRO Initao</option>
+            <select id="office" name="office" class="form-control" required autocomplete="off">
+                <option value="" disabled {{ $officeCurrent ? '' : 'selected' }}>Select Office</option>
+
+                @foreach($offices as $officeOption)
+                    @php $selected = $norm($officeCurrent) === $norm($officeOption); @endphp
+                    <option value="{{ $officeOption }}" {{ $selected ? 'selected' : '' }}>
+                        {{ $officeOption }}
+                    </option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('office')" class="mt-2" />
         </div>
@@ -100,27 +100,47 @@
         <!-- Sex -->
         <div>
             <x-input-label for="sex" :value="__('Sex')" />
-            <select id="sex" name="sex" class="form-control">
-                <option value="" disabled selected>Select Sex</option>
-                <option value="Male" {{ old('sex', $user->sex) == 'Male' ? 'selected' : '' }}>Male</option>
-                <option value="Female" {{ old('sex', $user->sex) == 'Female' ? 'selected' : '' }}>Female</option>
-                <option value="Other" {{ old('sex', $user->sex) == 'Other' ? 'selected' : '' }}>Other</option>
+            <select id="sex" name="sex" class="form-control" autocomplete="off">
+                <option value="" disabled {{ $sexCurrent ? '' : 'selected' }}>Select Sex</option>
+                @foreach($sexes as $sexOption)
+                    @php $selected = $norm($sexCurrent) === $norm($sexOption); @endphp
+                    <option value="{{ $sexOption }}" {{ $selected ? 'selected' : '' }}>
+                        {{ $sexOption }}
+                    </option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('sex')" class="mt-2" />
         </div>
 
+        
         <!-- Marital Status -->
         <div>
             <x-input-label for="marital_status" :value="__('Marital Status')" />
-            <select id="marital_status" name="marital_status" class="form-control">
-                <option value="" disabled selected>Select Marital Status</option>
-                <option value="Single" {{ old('marital_status', $user->marital_status) == 'Single' ? 'selected' : '' }}>Single</option>
-                <option value="Married" {{ old('marital_status', $user->marital_status) == 'Married' ? 'selected' : '' }}>Married</option>
-                <option value="Divorced" {{ old('marital_status', $user->marital_status) == 'Divorced' ? 'selected' : '' }}>Divorced</option>
-                <option value="Widowed" {{ old('marital_status', $user->marital_status) == 'Widowed' ? 'selected' : '' }}>Widowed</option>
+            <select id="marital_status" name="marital_status" class="form-control" autocomplete="off">
+                <option value="" disabled {{ $msCurrent ? '' : 'selected' }}>Select Marital Status</option>
+                @foreach($maritalStatuses as $ms)
+                    @php $selected = $norm($msCurrent) === $norm($ms); @endphp
+                    <option value="{{ $ms }}" {{ $selected ? 'selected' : '' }}>
+                        {{ $ms }}
+                    </option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('marital_status')" class="mt-2" />
         </div>
+
+
+        <!-- Birthdate -->
+        @php
+            // format to Y-m-d for type=date
+            $birthVal = session()->hasOldInput() ? old('birthdate') : ( $user->birthdate ? \Carbon\Carbon::parse($user->birthdate)->format('Y-m-d') : '' );
+        @endphp
+
+        <div>
+            <x-input-label for="birthdate" :value="__('Birthdate')" />
+            <input id="birthdate" name="birthdate" type="date" class="form-control mt-1 block w-full" value="{{ $birthVal }}" autocomplete="off" />
+            <x-input-error :messages="$errors->get('birthdate')" class="mt-2" />
+        </div>
+
 
         <!-- Annual Income -->
         <div>

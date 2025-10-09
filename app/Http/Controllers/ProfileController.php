@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -22,8 +23,36 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
-        $user = auth()->user(); // Get the authenticated user
-        return view('profile.edit', compact('user'));
+
+
+        $user = auth()->user()->fresh();
+
+        // Offices as array (you said you don't want an Office model)
+        $offices = [
+            "Department of Environment and Natural Resources",
+            "Environmental Management Bureau",
+            "Mines and Geosciences Bureau",
+            "PENRO Bukidnon",
+            "PENRO Camiguin",
+            "PENRO Lanao Del Norte",
+            "PENRO Misamis Occidental",
+            "PENRO Misamis Oriental",
+            "CENRO Don Carlos",
+            "CENRO Manolo Fortich",
+            "CENRO Valencia",
+            "CENRO Talakag",
+            "CENRO Iligan",
+            "CENRO Kolambugan",
+            "CENRO Oroquieta",
+            "CENRO Ozamis",
+            "CENRO Gingoog",
+            "CENRO Initao",
+        ];
+
+        $sexes = ['Male', 'Female', 'Other'];
+        $maritalStatuses = ['Single', 'Married', 'Divorced', 'Widowed'];
+
+        return view('profile.edit', compact('user', 'offices', 'sexes', 'maritalStatuses'));
     }
 
     public function changepassword(Request $request)
@@ -96,9 +125,12 @@ class ProfileController extends Controller
     }
     
        // Update user fields
-        $user->update($validatedData);
-    
-        return redirect()->route('profile')->with('status', 'profile-updated');
+        // $user->update($validatedData);
+         $request->user()->update($validatedData);
+
+        auth()->setUser(auth()->user()->fresh());
+
+    return redirect()->route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
