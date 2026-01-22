@@ -17,20 +17,57 @@ class SharesController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->input('perPage', 10); // default is 10
-        $members = User::where('is_admin', '!=', 1)->paginate($perPage); // adjust your query as needed
+        $perPage = (int) $request->input('per_page', 10);
 
-        $offices = User::distinct()->pluck('office');
-        return view('shares', compact('members', 'offices'));
+        $members = User::where('is_admin', '!=', 1)
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $offices = User::where('is_admin', '!=', 1)
+            ->whereNotNull('office')
+            ->distinct()
+            ->orderBy('office')
+            ->pluck('office');
+
+        return view('admin.shares', compact('members', 'offices', 'perPage'));
     }
 
-    public function controllerShares()
+    public function controllerShares(Request $request)
     {
-    $members = User::where('status', 'Active')->get(); // Only approved members
-    $offices = User::where('status', 'Active')->pluck('office')->unique();
+        $perPage = (int) $request->input('per_page', 10);
+        $search  = trim((string) $request->input('search', ''));
+        $office  = (string) $request->input('office', '');
 
-    return view('admin.shares', compact('members', 'offices'));
+        $query = User::query()
+            ->where('is_admin', '!=', 1)
+            ->where('status', 'Active');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_ID', 'like', "%{$search}%")
+                ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        if ($office !== '') {
+            $query->where('office', $office);
+        }
+
+        $members = $query->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $offices = User::where('is_admin', '!=', 1)
+            ->where('status', 'Active')
+            ->whereNotNull('office')
+            ->distinct()
+            ->orderBy('office')
+            ->pluck('office');
+
+        return view('admin.shares', compact('members', 'offices', 'perPage'));
     }
+
+
 
     public function bulkAddShares(Request $request)
     {

@@ -51,18 +51,6 @@
 </div>
 
     <!-- Filters and Actions -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <!-- Office Filter -->
-        <div>
-            <label for="officeFilter" class="form-label">Filter by Office</label>
-            <select id="officeFilter" class="form-select">
-                <option value="">All Offices</option>
-                @foreach($offices as $office)
-                    <option value="{{ $office }}">{{ $office }}</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <!-- Right-Aligned Inputs -->
@@ -107,12 +95,50 @@
         </div>
     </div>
 
-    <!-- Search Bar -->
-    <div class="mb-3">
-        <label for="searchShares" class="form-label">Search Shares</label>
-        <input type="text" id="searchShares" class="form-control" placeholder="Search by Employee Name, ID, or Office...">
-    </div>
+    <form method="GET" action="{{ url()->current() }}" id="sharesFiltersForm" class="mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="officeFilter" class="form-label">Filter by Office</label>
+                <select id="officeFilter" name="office" class="form-select">
+                    <option value="">All Offices</option>
+                    @foreach($offices as $office)
+                        <option value="{{ $office }}" {{ request('office') === $office ? 'selected' : '' }}>
+                            {{ $office }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
+            <div class="col-md-5">
+                <label for="searchShares" class="form-label">Search Shares</label>
+                <input
+                    type="text"
+                    id="searchShares"
+                    name="search"
+                    class="form-control"
+                    placeholder="Search by Employee Name, ID, or Office..."
+                    value="{{ request('search') }}"
+                >
+            </div>
+
+            <div class="col-md-2">
+                <label for="per_page" class="form-label">Show</label>
+                <select name="per_page" id="per_page" class="form-select">
+                    @foreach ([10, 20, 50, 100] as $option)
+                        <option value="{{ $option }}" {{ ($perPage ?? 10) == $option ? 'selected' : '' }}>
+                            {{ $option }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <a href="{{ url()->current() }}?per_page={{ $perPage ?? 10 }}" class="btn btn-secondary w-100">
+                    Clear
+                </a>
+            </div>
+        </div>
+    </form>
 
 
     <!-- Members Table -->
@@ -147,7 +173,7 @@
                 @endphp
                 <tr class="memberRow" data-name="{{ strtolower($member->name) }}" data-id="{{ strtolower($member->employee_ID) }}" data-office="{{ strtolower($member->office) }}" data-shares="{{ $member->shares }}">
                     <td><input type="checkbox" class="memberCheckbox" value="{{ $member->id }}"></td>
-                    <td>{{ $count++ }}</td>
+                    <td>{{ ($members->currentPage() - 1) * $members->perPage() + $loop->iteration }}</td>
                     <td>{{ $member->employee_ID }}</td>
                     <td>{{ $member->name }}</td>
                     <td>{{ $member->office }}</td>
@@ -156,7 +182,11 @@
                     <td>{{ $latestRemittance ?? 'N/A' }}</td>
                     <td>{{ $totalShares }}</td>
                     <td>{{ $monthsContributed }}</td>
-                    <td>{{ $saving->date_updated ?? 'N/A' }}</td>
+                    @php
+                    $lastUpdated = \App\Models\Share::where('employees_id', $member->id)->max('date_updated');
+                    @endphp
+                    <td>{{ $lastUpdated ? \Carbon\Carbon::parse($lastUpdated)->format('Y-m-d') : 'N/A' }}</td>
+
                     <td>
                         <button class="btn btn-info update-details-btn"
                             data-bs-toggle="modal"
@@ -192,6 +222,10 @@
             @endforeach
         </tbody>
     </table>
+
+    <div class="mt-4">
+        {{ $members->appends(request()->except('page'))->links() }}
+    </div>
 
 <!-- Modal for Updating Member Details -->
 <div class="modal fade" id="updateDetailsModal" tabindex="-1" aria-labelledby="updateDetailsModalLabel" aria-hidden="true">
@@ -288,6 +322,24 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    const filtersForm = document.getElementById('sharesFiltersForm');
+    const searchInput = document.getElementById('searchShares');
+    const officeSelect = document.getElementById('officeFilter');
+    const perPageSelect = document.getElementById('per_page');
+
+    let t = null;
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => filtersForm.submit(), 300);
+    });
+
+    officeSelect.addEventListener('change', () => filtersForm.submit());
+    perPageSelect.addEventListener('change', () => filtersForm.submit());
+
+
+
     const selectAllCheckbox = document.getElementById('selectAll');
     const memberCheckboxes = document.querySelectorAll('.memberCheckbox');
     const addSharesBtn = document.getElementById('addSharesBtn');
@@ -315,18 +367,6 @@ document.addEventListener('DOMContentLoaded', function () {
         cb.addEventListener('change', toggleAddSharesButton);
     });
 
-    // Office Filtering
-    officeFilter.addEventListener('change', function () {
-        const selectedOffice = officeFilter.value.toLowerCase().trim();
-
-        document.querySelectorAll('.memberRow').forEach(row => {
-            const office = row.getAttribute('data-office').toLowerCase().trim();
-            row.style.display = selectedOffice === '' || office === selectedOffice ? '' : 'none';
-        });
-
-        // Reset shares amount filter
-        sharesAmount.value = "";
-    });
 
     // Shares Filtering - Apply only to selected office
     sharesAmount.addEventListener('input', function () {
@@ -414,16 +454,6 @@ addSharesBtn.addEventListener('click', function () {
     });
 });
 
-document.getElementById("searchShares").addEventListener("keyup", function () {
-    let query = this.value.toLowerCase();
-    document.querySelectorAll("#membersTableBody .memberRow").forEach(row => {
-        let name = row.getAttribute("data-name");
-        let id = row.getAttribute("data-id");
-        let office = row.getAttribute("data-office");
-
-        row.style.display = name.includes(query) || id.includes(query) || office.includes(query) ? "" : "none";
-    });
-});
 
 document.querySelectorAll(".update-details-btn").forEach(button => {
     button.addEventListener("click", function () {
