@@ -1,7 +1,23 @@
 <x-admin-layout>
 <div class="content-wrapper">
         <div class="page-title"><h4>Loan Details</h4></div>
+        @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
 
+        @if(session('error'))
+        <div class="alert alert-danger" style="white-space: pre-line;">{{ session('error') }}</div>
+        @endif
+
+        @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+            @foreach ($errors->all() as $err)
+                <li>{{ $err }}</li>
+            @endforeach
+            </ul>
+        </div>
+        @endif
         <div class="loan-container">
                 <form method="POST" action="{{ route('admin.store-loan') }}" class="form-loan-details">
                     @csrf
@@ -30,25 +46,25 @@
                         <!-- Co Maker 1 -->
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="co_maker_name">Co-maker 1</label>
-                            <input type="text" name="co_maker_name" id="co_maker_name" class="form-control" required>
+                            <input type="text" name="co_maker_name" id="co_maker_name" class="form-control">
                             <div id="co_maker_suggestions" class="autocomplete-suggestions col-md-3"></div>
                             <small id="co_maker_error" class="error-message">Co-Maker not found!</small>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="co_maker_position">Position</label>
-                            <input type="text" name="co_maker_position" id="co_maker_position" class="form-control" required>
+                            <input type="text" name="co_maker_position" id="co_maker_position" class="form-control">
                         </div>
 
                         <!-- Co Maker 1 -->
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="co_maker2_name">Co-maker 2</label>
-                            <input type="text" name="co_maker2_name" id="co_maker2_name" class="form-control" required>
+                            <input type="text" name="co_maker2_name" id="co_maker2_name" class="form-control">
                             <div id="co_maker2_suggestions" class="autocomplete-suggestions col-md-3"></div>
                             <small id="co_maker2_error" class="error-message">Co-Maker not found!</small>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="co_maker2_position">Position</label>
-                            <input type="text" name="co_maker2_position" id="co_maker2_position" class="form-control"required>
+                            <input type="text" name="co_maker2_position" id="co_maker2_position" class="form-control">
                         </div>
                     </div>
 
@@ -90,14 +106,14 @@
                     <div class="row">
                         <div class="col-md-2 mb-3">
                             <label class="form-label" for="total_deduction">Total Deduction</label>
-                            <input type="text" name="total_deduction" id="total_deduction" class="form-control disabled" required readonly>
+                            <input type="text" name="total_deduction" id="total_deduction" class="form-control disabled" readonly>
                             <br>
                             <label class="form-label" for="old_balance">Balance</label>
                             <input type="text" step="0.01" name="old_balance" id="old_balance" class="form-control" required>
                         </div>
                         <div class="col-md-2 mb-3">
                             <label class="form-label" for="total_net">Total Net</label>
-                            <input type="text" name="total_net" id="total_net" class="form-control disabled" required readonly>
+                            <input type="text" name="total_net" id="total_net" class="form-control disabled" readonly>
                             <br>
                             <label class="form-label" for="interest">Interest</label>
                             <input type="text" step="0.01" name="interest" id="interest" class="form-control" required>
@@ -331,6 +347,12 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
+    const URLS = {
+        userDetails: @json(url('/admin/get-user-details')),   // + /{employeeId}
+        coMaker:     @json(url('/admin/get-co-maker')),       // + /{name}
+        loanUpdate:  @json(url('/admin/loans/update')),       // + /{loanId}
+        loanSearch:  @json(url('/admin/loans/search')),       // + ?q=
+    };
 
     let employeeInput = document.getElementById("employee_id");
 
@@ -339,7 +361,7 @@ document.addEventListener("DOMContentLoaded", function () {
             let employeeId = this.value.trim();
 
             if (employeeId.length > 3) {
-                fetch(`/admin/get-user-details/${encodeURIComponent(employeeId)}`, {
+                fetch(`${URLS.userDetails}/${encodeURIComponent(employeeId)}`, {
                     headers: { 'Accept': 'application/json' }
                 })
                 .then(async response => {
@@ -386,7 +408,7 @@ function setupCoMakerSearch(inputId, positionId, suggestionBoxId, errorId) {
                     let coMakerName = this.value.trim();
 
                     if (coMakerName.length > 2) {
-                        fetch(`/admin/get-co-maker/${encodeURIComponent(coMakerName)}`, {
+                        fetch(`${URLS.coMaker}/${encodeURIComponent(coMakerName)}`, {
                             headers: { 'Accept': 'application/json' }
                         })
                             .then(async response => {
@@ -547,7 +569,7 @@ document.getElementById("updateLoanForm").addEventListener("submit", function (e
 
     let loanId = document.getElementById("update_loan_id").value;
 
-    fetch(`/admin/loans/update/${encodeURIComponent(loanId)}`, {
+    fetch(`${URLS.loanUpdate}/${encodeURIComponent(loanId)}`, {
         method: "POST",
         body: formData,
         headers: {
@@ -590,7 +612,7 @@ let searchInput = document.getElementById("search_loans");
     searchInput.addEventListener("keyup", function () {
         let query = this.value.trim();
 
-        fetch(`/admin/loans/search?q=${encodeURIComponent(query)}`, {
+        fetch(`${URLS.loanSearch}?q=${encodeURIComponent(query)}`, {
             headers: { "Accept": "application/json" }
         })
         .then(async response => {

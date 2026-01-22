@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\LoanDetail;
 use Carbon\Carbon;
-use App\Models\Loan;
 use Illuminate\Support\Facades\Log;
 use App\Models\LoanPayment;
 
@@ -89,7 +88,10 @@ public function store(Request $request)
     $totalNet = ($request->loan_amount ?? 0) - $totalDeduction;
 
     // Merge Total Net into the request before validation
-    $request->merge(['total_net' => $totalNet]);
+    $request->merge([
+        'total_deduction' => $totalDeduction,
+        'total_net'       => $totalNet,
+    ]);
 
     // Validation
     try {
@@ -103,13 +105,12 @@ public function store(Request $request)
             'monthly_payment' => 'required|numeric|min:1',
             'old_balance' => 'nullable|numeric|min:0',
             'lpp' => 'nullable|numeric|min:0',
-            'interest' => 'nullable|numeric|min:0',
             'handling_fee' => 'nullable|numeric|min:0',
             'petty_cash_loan' => 'nullable|numeric|min:0',
-            'total_net' => 'required|numeric|min:0',
+            'total_net'       => 'required|numeric|min:0',
             'date_applied' => 'required|date',
             'date_approved' => 'required|date',
-            'total_deduction' => 'required|numeric|min:1',
+            'total_deduction' => 'required|numeric|min:0',
             'co_maker_name' => 'nullable|string',
             'co_maker_position' => 'nullable|string',
             'co_maker2_name' => 'nullable|string',
