@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Withdraw;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 use App\Exports\WithdrawTemplateExport;
 use App\Imports\WithdrawImport;
@@ -28,14 +29,101 @@ class WithdrawController extends Controller
     }
 
 
-    // Page (like your Savings page)
-    public function controllerWithdraw()
+    public function controllerWithdraw(Request $request)
     {
-        $members = User::where('status', 'Active')->get();
-        $offices = User::where('status', 'Active')->pluck('office')->unique();
+        $perPage = (int) $request->input('per_page', 10);
+        $search  = trim((string) $request->input('search', ''));
+        $office  = trim((string) $request->input('office', ''));
 
-        return view('admin.withdraw', compact('members', 'offices'));
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
+
+        if ($office !== '') {
+            $q->where('office', $office);
+        }
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_ID', 'like', "%{$search}%")
+                ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $offices = User::where('status', 'Active')->pluck('office')->unique()->values();
+
+        $userIds = $members->pluck('id');
+
+        $withdrawTotals = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $latestWithdrawByUser = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_of_withdrawal) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        return view('admin.withdraw', compact(
+            'members',
+            'offices',
+            'perPage',
+            'withdrawTotals',
+            'latestWithdrawByUser'
+        ));
     }
+
+    public function partial(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $search  = trim((string) $request->input('search', ''));
+        $office  = trim((string) $request->input('office', ''));
+
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
+
+        if ($office !== '') $q->where('office', $office);
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_ID', 'like', "%{$search}%")
+                ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $userIds = $members->pluck('id');
+
+        $withdrawTotals = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $latestWithdrawByUser = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_of_withdrawal) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        $tbody = view('admin.withdraw._rows', compact(
+            'members',
+            'withdrawTotals',
+            'latestWithdrawByUser'
+        ))->render();
+
+        $pagination = view('admin.withdraw._pagination', compact('members'))->render();
+
+        return response()->json([
+            'tbody' => $tbody,
+            'pagination' => $pagination,
+        ]);
+    }
+
 
     // Bulk add withdrawals (multi-select members, one date/amount/reference)
     public function bulkAddWithdraw(Request $request)

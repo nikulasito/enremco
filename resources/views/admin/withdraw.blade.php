@@ -34,17 +34,6 @@
 
 
     <!-- Filters and Inputs -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <label class="form-label">Filter by Office</label>
-            <select id="officeFilter" class="form-select">
-                <option value="">All Offices</option>
-                @foreach($offices as $office)
-                    <option value="{{ $office }}">{{ $office }}</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3">
 
@@ -85,11 +74,40 @@
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="mb-3">
-        <label class="form-label">Search Members</label>
-        <input type="text" id="searchWithdraw" class="form-control" placeholder="Search by Name, ID, or Office...">
-    </div>
+    <form method="GET" action="{{ url()->current() }}" id="withdrawFiltersForm" class="mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Filter by Office</label>
+                <select id="officeFilter" name="office" class="form-select">
+                    <option value="">All Offices</option>
+                    @foreach($offices as $office)
+                        <option value="{{ $office }}" {{ request('office')===$office ? 'selected':'' }}>{{ $office }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-5">
+                <label class="form-label">Search Members</label>
+                <input type="text" id="searchWithdraw" name="search" class="form-control"
+                    value="{{ request('search') }}"
+                    placeholder="Search by Name, ID, or Office...">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Show</label>
+                <select name="per_page" id="per_page" class="form-select">
+                    @foreach([10,20,50,100] as $n)
+                        <option value="{{ $n }}" {{ (request('per_page', $perPage ?? 10)==$n) ? 'selected':'' }}>{{ $n }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="button" id="clearWithdrawFilters" class="btn btn-secondary w-100">Clear</button>
+            </div>
+        </div>
+    </form>
+
 
     <!-- Members table -->
     <table class="table table-striped">
@@ -106,20 +124,27 @@
             </tr>
         </thead>
         <tbody id="membersTableBody">
-            @php $i = 1; @endphp
-            @foreach($members as $m)
+            @php $i = $members->firstItem() ?? 1; @endphp
+
+            @forelse($members as $m)
                 @php
-                    $totalWithdraw = \App\Models\Withdraw::where('employees_id', $m->id)->sum('amount_withdrawn');
-                    $latestWithdraw = \App\Models\Withdraw::where('employees_id', $m->id)->orderBy('date_of_withdrawal','desc')->value('date_of_withdrawal');
+                    $uid = $m->id;
+                    $totalWithdraw = (float)($withdrawTotals[$uid] ?? 0);
+                    $latestWithdraw = $latestWithdrawByUser[$uid] ?? null;
                 @endphp
-                <tr class="memberRow" data-name="{{ strtolower($m->name) }}" data-id="{{ strtolower($m->employee_ID) }}" data-office="{{ strtolower($m->office) }}">
+
+                <tr class="memberRow"
+                    data-name="{{ strtolower($m->name) }}"
+                    data-id="{{ strtolower($m->employee_ID) }}"
+                    data-office="{{ strtolower($m->office) }}">
+
                     <td><input type="checkbox" class="memberCheckbox" value="{{ $m->id }}"></td>
                     <td>{{ $i++ }}</td>
                     <td>{{ $m->employee_ID }}</td>
                     <td>{{ $m->name }}</td>
                     <td>{{ $m->office }}</td>
                     <td>{{ $latestWithdraw ?? 'N/A' }}</td>
-                    <td>{{ number_format($totalWithdraw,2) }}</td>
+                    <td>{{ number_format($totalWithdraw, 2) }}</td>
                     <td>
                         <button class="btn btn-info view-withdrawals-btn"
                             data-bs-toggle="modal"
@@ -132,9 +157,16 @@
                         </button>
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="8" class="text-center text-muted">No records found</td></tr>
+            @endforelse
         </tbody>
+
     </table>
+
+    <div class="mt-4">
+        {{ $members->appends(request()->except('page'))->links() }}
+    </div>
 
     <!-- Modal -->
     <div class="modal fade" id="viewWithdrawalsModal" tabindex="-1" aria-hidden="true">
@@ -167,6 +199,31 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const filtersForm = document.getElementById('withdrawFiltersForm');
+    const searchInput = document.getElementById('searchWithdraw');
+    const officeSelect = document.getElementById('officeFilter');
+    const perPageSelect = document.getElementById('per_page');
+    const clearBtn = document.getElementById('clearWithdrawFilters');
+
+    let t = null;
+
+    // Submit on typing (debounced)
+    searchInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => filtersForm.submit(), 300);
+    });
+
+    // Submit on filter change
+    officeSelect.addEventListener('change', () => filtersForm.submit());
+    perPageSelect.addEventListener('change', () => filtersForm.submit());
+
+    // Clear filters (keep per_page)
+    clearBtn.addEventListener('click', () => {
+        const per = perPageSelect.value || 10;
+        window.location.href = `${filtersForm.action}?per_page=${encodeURIComponent(per)}`;
+    });
+
+    // Existing select all + add withdrawal + modal logic stays as-is
     const selectAll = document.getElementById('selectAll');
     const addBtn = document.getElementById('addWithdrawBtn');
 
@@ -178,24 +235,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.memberCheckbox').forEach(cb => cb.checked = selectAll.checked);
     });
 
-    document.getElementById('searchWithdraw').addEventListener('keyup', function(){
-        const q = this.value.toLowerCase();
-        document.querySelectorAll('#membersTableBody .memberRow').forEach(row => {
-            const name = row.getAttribute('data-name');
-            const id = row.getAttribute('data-id');
-            const office = row.getAttribute('data-office');
-            row.style.display = (name.includes(q) || id.includes(q) || office.includes(q)) ? '' : 'none';
-        });
-    });
+    addBtn.addEventListener('click', function(e){
+        e.preventDefault();
 
-    document.getElementById('officeFilter').addEventListener('change', function(){
-        const office = this.value.toLowerCase().trim();
-        document.querySelectorAll('#membersTableBody .memberRow').forEach(row => {
-            row.style.display = (office === '' || row.getAttribute('data-office') === office) ? '' : 'none';
-        });
-    });
-
-    addBtn.addEventListener('click', function(){
         const members = selectedIds();
         const amount = document.getElementById('withdrawAmount').value;
         const date   = document.getElementById('dateWithdrawal').value;
@@ -227,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(err => alert('Error: ' + err.message));
     });
 
-    // View/Edit modal
+    // View/Edit modal handlers (keep your existing code)
     document.querySelectorAll('.view-withdrawals-btn').forEach(btn => {
         btn.addEventListener('click', function(){
             document.getElementById('wModalEmployeeID').textContent = this.dataset.employee_id;
@@ -262,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function () {
                       </tr>`;
                   });
               } else {
-                  html += `<tr><td colspan="6" class="text-center">No withdrawals found</td></tr>`;
+                  html += `<tr><td colspan="5" class="text-center">No withdrawals found</td></tr>`;
               }
 
               html += `</tbody></table>
@@ -270,25 +312,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
               document.getElementById('withdrawalsResult').innerHTML = html;
           })
-          .catch(err => {
+          .catch(() => {
               document.getElementById('withdrawalsResult').innerHTML = `<p class="text-danger">Failed to load.</p>`;
           });
     });
 
-    // Save inline edits
     document.addEventListener('click', function(e){
         if (e.target && e.target.id === 'saveWithdrawChangesBtn') {
             const rows = document.querySelectorAll('#withdrawalsResult table tbody tr');
             const updates = [];
-            rows.forEach((row, i) => {
-                const id  = row.getAttribute('data-withdrawals-id');
-                const date= row.querySelector(`[name="date_of_withdrawal_${i}"]`).value;
-                const ref = row.querySelector(`[name="reference_no_${i}"]`).value;
-                const mon = row.querySelector(`[name="month_name_${i}"]`).value;
-                const yr  = row.querySelector(`[name="covered_year_${i}"]`).value;
-                const amt = row.querySelector(`[name="amount_withdrawn_${i}"]`).value;
 
-                if (!date || isNaN(amt)) { return; }
+            rows.forEach((row, i) => {
+                const id   = row.getAttribute('data-withdrawals-id');
+                const date = row.querySelector(`[name="date_of_withdrawal_${i}"]`).value;
+                const ref  = row.querySelector(`[name="reference_no_${i}"]`).value;
+                const mon  = row.querySelector(`[name="month_name_${i}"]`).value;
+                const yr   = row.querySelector(`[name="covered_year_${i}"]`).value;
+                const amt  = row.querySelector(`[name="amount_withdrawn_${i}"]`).value;
+
+                if (!id || !date || isNaN(amt)) return;
 
                 updates.push({
                     withdrawals_id: id,
@@ -310,9 +352,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert(d.message || (d.success ? 'Saved' : 'No changes'));
                 if (d.success) location.reload();
             })
-            .catch(err => alert('Error saving changes'));
+            .catch(() => alert('Error saving changes'));
         }
     });
 });
 </script>
+
 </x-admin-layout>
