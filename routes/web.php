@@ -89,6 +89,8 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::get('/admin/savings', [SavingsController::class, 'controllerSavings'])->name('admin.savings');
     Route::post('/admin/bulk-add-savings', [SavingsController::class, 'bulkAddSavings'])->name('admin.bulk-add-savings');
 });
+Route::get('/admin/savings/partial', [SavingsController::class, 'partial'])
+    ->name('admin.savings.partial');
 
 //Start Loans
 Route::middleware(['auth', IsAdmin::class])->group(function () {

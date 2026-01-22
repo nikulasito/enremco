@@ -27,47 +27,153 @@ class SavingsController extends Controller
         return view('savings', compact('members', 'offices'));
     }
 
-    public function controllerSavings()
-        {
-            $members = User::where('status', 'Active')->get();
-            $offices = User::where('status', 'Active')->pluck('office')->unique();
+    public function controllerSavings(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $search  = trim((string) $request->input('search', ''));
+        $office  = trim((string) $request->input('office', ''));
 
-            // SAVINGS totals keyed by users.id
-            $savingById = Saving::join('users', 'savings.employees_id', '=', 'users.id')
-                ->select('users.id as uid', DB::raw('SUM(savings.amount) as total'))
-                ->groupBy('users.id')
-                ->pluck('total', 'uid')
-                ->toArray();
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
 
-            $savingViaEmpNum = Saving::join('users', 'savings.employees_id', '=', 'users.employee_ID')
-                ->select('users.id as uid', DB::raw('SUM(savings.amount) as total'))
-                ->groupBy('users.id')
-                ->pluck('total', 'uid')
-                ->toArray();
-
-            $savingTotals = Saving::select('employees_id', DB::raw('SUM(amount) as total'))
-            ->groupBy('employees_id')
-            ->pluck('total', 'employees_id');
-
-            // WITHDRAW totals keyed by users.id
-            $withdrawById = Withdraw::join('users', 'withdrawals.employees_id', '=', 'users.id')
-                ->select('users.id as uid', DB::raw('SUM(withdrawals.amount_withdrawn) as total'))
-                ->groupBy('users.id')
-                ->pluck('total', 'uid')
-                ->toArray();
-
-            $withdrawViaEmpNum = Withdraw::join('users', 'withdrawals.employees_id', '=', 'users.employee_ID')
-                ->select('users.id as uid', DB::raw('SUM(withdrawals.amount_withdrawn) as total'))
-                ->groupBy('users.id')
-                ->pluck('total', 'uid')
-                ->toArray();
-
-            $withdrawTotals = Withdraw::select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
-            ->groupBy('employees_id')
-            ->pluck('total', 'employees_id');
-
-            return view('admin.savings', compact('members', 'offices', 'savingTotals', 'withdrawTotals'));
+        if ($office !== '') {
+            $q->where('office', $office);
         }
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_ID', 'like', "%{$search}%")
+                ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $offices = User::where('status', 'Active')->pluck('office')->unique()->values();
+
+        $userIds = $members->pluck('id');
+
+        $savingTotals = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $withdrawTotals = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $monthsContributedByUser = Saving::whereIn('employees_id', $userIds)
+            ->whereNotNull('covered_month')
+            ->select('employees_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('employees_id')
+            ->pluck('cnt', 'employees_id');
+
+        $firstRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MIN(date_remittance) as first'))
+            ->groupBy('employees_id')
+            ->pluck('first', 'employees_id');
+
+        $latestRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_remittance) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        $latestUpdatedByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_updated) as updated'))
+            ->groupBy('employees_id')
+            ->pluck('updated', 'employees_id');
+
+        return view('admin.savings', compact(
+            'members',
+            'offices',
+            'perPage',
+            'savingTotals',
+            'withdrawTotals',
+            'monthsContributedByUser',
+            'firstRemittanceByUser',
+            'latestRemittanceByUser',
+            'latestUpdatedByUser'
+        ));
+    }
+
+    public function partial(Request $request)
+    {
+        // Reuse the same logic as controllerSavings, but return partial HTML
+        $perPage = (int) $request->input('per_page', 10);
+        $search  = trim((string) $request->input('search', ''));
+        $office  = trim((string) $request->input('office', ''));
+
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
+
+        if ($office !== '') $q->where('office', $office);
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_ID', 'like', "%{$search}%")
+                ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $userIds = $members->pluck('id');
+
+        $savingTotals = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $withdrawTotals = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $monthsContributedByUser = Saving::whereIn('employees_id', $userIds)
+            ->whereNotNull('covered_month')
+            ->select('employees_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('employees_id')
+            ->pluck('cnt', 'employees_id');
+
+        $firstRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MIN(date_remittance) as first'))
+            ->groupBy('employees_id')
+            ->pluck('first', 'employees_id');
+
+        $latestRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_remittance) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        $latestUpdatedByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_updated) as updated'))
+            ->groupBy('employees_id')
+            ->pluck('updated', 'employees_id');
+
+        $tbody = view('admin.savings._rows', compact(
+            'members',
+            'savingTotals',
+            'withdrawTotals',
+            'monthsContributedByUser',
+            'firstRemittanceByUser',
+            'latestRemittanceByUser',
+            'latestUpdatedByUser'
+        ))->render();
+
+        $pagination = view('admin.savings._pagination', compact('members'))->render();
+
+        return response()->json([
+            'tbody' => $tbody,
+            'pagination' => $pagination,
+        ]);
+    }
+
+
 
 
 

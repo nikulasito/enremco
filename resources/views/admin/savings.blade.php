@@ -34,7 +34,7 @@
         </div>
 
 <!-- Error Modal -->
-<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+<div class="modal fade" id="uploadErrorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header bg-danger text-white">
@@ -49,19 +49,7 @@
 </div>
 
     <!-- Filters and Actions -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <!-- Office Filter -->
-        <div>
-            <label for="officeFilter" class="form-label">Filter by Office</label>
-            <select id="officeFilter" class="form-select">
-                <option value="">All Offices</option>
-                @foreach($offices as $office)
-                    <option value="{{ $office }}">{{ $office }}</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
-
+    
     <div class="d-flex justify-content-between align-items-center mb-3">
         <!-- Right-Aligned Inputs -->
         <div class="col-lg-2">
@@ -105,11 +93,44 @@
         </div>
     </div>
 
-    <!-- Search Bar -->
-    <div class="mb-3">
-        <label for="searchSavings" class="form-label">Search Savings</label>
-        <input type="text" id="searchSavings" class="form-control" placeholder="Search by Employee Name, ID, or Office...">
-    </div>
+    <form method="GET" action="{{ url()->current() }}" id="savingsFiltersForm" class="mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="officeFilter" class="form-label">Filter by Office</label>
+                <select id="officeFilter" name="office" class="form-select">
+                    <option value="">All Offices</option>
+                    @foreach($offices as $office)
+                        <option value="{{ $office }}" {{ request('office') === $office ? 'selected' : '' }}>
+                            {{ $office }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-5">
+                <label for="searchSavings" class="form-label">Search Savings</label>
+                <input type="text" id="searchSavings" class="form-control"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="Search by Employee Name, ID, or Office...">
+            </div>
+
+            <div class="col-md-2">
+                <label for="per_page" class="form-label">Show</label>
+                <select name="per_page" id="per_page" class="form-select">
+                    @foreach ([10, 20, 50, 100] as $option)
+                        <option value="{{ $option }}" {{ (request('per_page', $perPage ?? 10)) == $option ? 'selected' : '' }}>
+                            {{ $option }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="button" id="clearSavingsFilters" class="btn btn-secondary w-100">Clear</button>
+            </div>
+        </div>
+    </form>
 
     <!-- Members Table -->
     <table class="table table-striped savings-table">
@@ -132,81 +153,13 @@
             </tr>
         </thead>
         <tbody id="membersTableBody">
-            @php $count = 1; @endphp
-            @foreach($members as $index => $member)
-            @if($member->is_admin != 1) <!-- Skip if user is an admin -->
-                @php
-                    // Totals (use numeric users.id everywhere)
-                    $totalSavings   = (float) ($savingTotals[$member->id] ?? 0);
-                    $totalWithdrawn = (float) ($withdrawTotals[$member->id] ?? 0);
-                    $remainingBalance = max($totalSavings - $totalWithdrawn, 0); // <-- fix
-
-                    $monthsContributed = \App\Models\Saving::where('employees_id', $member->id)
-                        ->whereNotNull('covered_month')->count();
-
-                    $firstRemittance = \App\Models\Saving::where('employees_id', $member->id)
-                        ->orderBy('date_remittance', 'asc')->value('date_remittance');
-
-                    $latestRemittance = \App\Models\Saving::where('employees_id', $member->id)
-                        ->orderBy('date_remittance', 'desc')->value('date_remittance');
-
-                    $latestUpdated = \App\Models\Saving::where('employees_id', $member->id)
-                        ->orderBy('date_updated', 'desc')->value('date_updated');
-                @endphp
-
-                <tr class="memberRow" data-name="{{ strtolower($member->name) }}" data-id="{{ strtolower($member->employee_ID) }}" data-office="{{ strtolower($member->office) }}" data-savings="{{ $member->savings }}">
-                    <td><input type="checkbox" class="memberCheckbox" value="{{ $member->id }}"></td>
-                    <td>{{ $count++ }}</td>
-                    <td>{{ $member->employee_ID }}</td>
-                    <td>{{ $member->name }}</td>
-                    <td>{{ $member->office }}</td>
-                    <td class="current-savings">{{ $member->savings }}</td>
-                    <td>{{ $firstRemittance ?? 'N/A' }}</td>
-                    <td>{{ $latestRemittance ?? 'N/A' }}</td>
-                    <td>{{ number_format($totalSavings,2) }}</td>
-                    <td>{{ number_format($totalWithdrawn,2) }}</td>
-                    <td>{{ number_format($remainingBalance,2) }}</td>
-                    <td>{{ $monthsContributed }}</td>
-                    @php
-                        $latestUpdated = \App\Models\Saving::where('employees_id', $member->id)
-                            ->orderBy('date_updated', 'desc')->value('date_updated');
-                    @endphp
-                    <td>{{ $latestUpdated ?? 'N/A' }}</td>
-                    <td>
-                        <button class="btn btn-info update-details-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#updateDetailsModal"
-                            data-id="{{ $member->id }}" {{-- Auto-generated ID --}}
-                            data-employee_id="{{ $member->employee_ID }}" {{-- Actual Employee Number (for display only) --}}
-                            data-name="{{ $member->name }}"
-                            data-office="{{ $member->office }}"
-                            data-contribution="{{ $member->savings }}"
-                            data-first-remittance="{{ $firstRemittance ?? 'N/A' }}"
-                            data-latest-remittance="{{ $latestRemittance ?? 'N/A' }}"
-                            data-total-savings="{{ $totalSavings }}"
-                            data-months-contributed="{{ $monthsContributed }}">
-                            Update
-                        </button>
-                        <button class="btn btn-info view-details-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#viewDetailsModal"
-                            data-id="{{ $member->id }}" {{-- Auto-generated ID --}}
-                            data-employee_id="{{ $member->employee_ID }}" {{-- Actual Employee Number (for display only) --}}
-                            data-name="{{ $member->name }}"
-                            data-office="{{ $member->office }}"
-                            data-contribution="{{ $member->savings }}"
-                            data-first-remittance="{{ $firstRemittance ?? 'N/A' }}"
-                            data-latest-remittance="{{ $latestRemittance ?? 'N/A' }}"
-                            data-total-savings="{{ $totalSavings }}"
-                            data-months-contributed="{{ $monthsContributed }}">
-                            View Contributions
-                        </button>
-                    </td>
-                </tr>
-                @endif
-            @endforeach
+            @include('admin.savings._rows')
         </tbody>
     </table>
+
+    <div id="savingsPagination" class="mt-4">
+        @include('admin.savings._pagination')
+    </div>
 
 
 <!-- Modal for Updating Member Details -->
@@ -282,7 +235,7 @@
 </div>
 
     <!-- Modal for No Checkbox Selected -->
-    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal fade" id="noSelectionModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -301,6 +254,91 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    const filtersForm   = document.getElementById('savingsFiltersForm');
+    const searchInput   = document.getElementById('searchSavings');
+    const officeSelect  = document.getElementById('officeFilter');
+    const perPageSelect = document.getElementById('per_page');
+    const clearBtn      = document.getElementById('clearSavingsFilters');
+
+    // Prevent Enter from submitting and refreshing
+    filtersForm.addEventListener('submit', (e) => e.preventDefault());
+
+    let debounceTimer = null;
+    let abortCtrl = null;
+
+    function buildParams(page = 1) {
+        return new URLSearchParams({
+            search: searchInput.value || '',
+            office: officeSelect.value || '',
+            per_page: perPageSelect.value || 10,
+            page: page
+        });
+    }
+
+    function syncUrl(params) {
+        // keeps URL updated without refresh
+        const newUrl = `${filtersForm.action}?${params.toString()}`;
+        history.replaceState({}, '', newUrl);
+    }
+
+    function fetchSavings(page = 1) {
+        const params = buildParams(page);
+        syncUrl(params);
+
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+
+        fetch(`{{ route('admin.savings.partial') }}?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: abortCtrl.signal
+        })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('membersTableBody').innerHTML = res.tbody;
+            document.getElementById('savingsPagination').innerHTML = res.pagination;
+
+            // Reset select all checkbox after refresh
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) selectAll.checked = false;
+
+            // Re-evaluate button state after refresh
+            toggleAddSavingsButton();
+        })
+        .catch(err => {
+            if (err.name !== 'AbortError') console.error(err);
+        });
+    }
+
+    // Auto search while typing (no refresh)
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchSavings(1), 350);
+    });
+
+    // Filter changes (no refresh)
+    officeSelect.addEventListener('change', () => fetchSavings(1));
+    perPageSelect.addEventListener('change', () => fetchSavings(1));
+
+    // Clear (no refresh)
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        officeSelect.value = '';
+        fetchSavings(1);
+    });
+
+    // AJAX pagination (no refresh)
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('#savingsPagination a');
+        if (!link) return;
+
+        e.preventDefault();
+        const url = new URL(link.href);
+        const page = url.searchParams.get('page') || 1;
+        fetchSavings(page);
+    });
+
+
     const selectAllCheckbox = document.getElementById('selectAll');
     const memberCheckboxes = document.querySelectorAll('.memberCheckbox');
     const addSavingsBtn = document.getElementById('addSavingsBtn');
@@ -312,53 +350,24 @@ document.addEventListener('DOMContentLoaded', function () {
         const selected = document.querySelectorAll('.memberCheckbox:checked').length > 0;
         addSavingsBtn.disabled = !selected;
 
-        // Disable filtering when checkboxes are selected
-        savingsAmount.disabled = selected;
-        officeFilter.disabled = selected;
+        // Disable filters while selecting (optional)
+        searchInput.disabled = selected;
+        officeSelect.disabled = selected;
+        perPageSelect.disabled = selected;
+
+        // DO NOT disable the amount input
+        // savingsAmount.disabled = selected;
     }
 
     // Select All Checkbox Logic
     selectAllCheckbox.addEventListener('change', function () {
-        memberCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+        document.querySelectorAll('.memberCheckbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
         toggleAddSavingsButton();
     });
 
-    // Individual Checkbox Logic
-    memberCheckboxes.forEach(cb => {
-        cb.addEventListener('change', toggleAddSavingsButton);
-    });
-
-    // Office Filtering
-    officeFilter.addEventListener('change', function () {
-        const selectedOffice = officeFilter.value.toLowerCase().trim();
-
-        document.querySelectorAll('.memberRow').forEach(row => {
-            const office = row.getAttribute('data-office').toLowerCase().trim();
-            row.style.display = selectedOffice === '' || office === selectedOffice ? '' : 'none';
-        });
-
-        // Reset savings amount filter
-        savingsAmount.value = "";
-    });
-
-    // Savings Filtering - Apply only to selected office
-    savingsAmount.addEventListener('input', function () {
-        const filterValue = parseInt(savingsAmount.value, 10);
-        const selectedOffice = officeFilter.value;
-
-        document.querySelectorAll('.memberRow').forEach(row => {
-            const savings = parseInt(row.getAttribute('data-savings'), 10);
-            const office = row.getAttribute('data-office');
-
-            // Apply filtering only to members within the selected office
-            if (selectedOffice === '' || office === selectedOffice) {
-                row.style.display = isNaN(filterValue) || savings === filterValue ? '' : 'none';
-            }
-        });
-    });
 
     // Handle Adding Savings
-addSavingsBtn.addEventListener('click', function () {
+    addSavingsBtn.addEventListener('click', function () {
     let selectedIds = Array.from(document.querySelectorAll('.memberCheckbox:checked'))
         .map(cb => cb.value);
 
@@ -369,8 +378,8 @@ addSavingsBtn.addEventListener('click', function () {
     let coveredYear = document.getElementById('covered_year').value;
 
     if (selectedIds.length === 0) {
-        let errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-        errorModal.show();
+        let m = new bootstrap.Modal(document.getElementById('noSelectionModal'));
+        m.show();
         return;
     }
 
@@ -415,7 +424,7 @@ addSavingsBtn.addEventListener('click', function () {
             alert(duplicatesMessage);
         } else if (data.success) {
             // No duplicates, proceed normally
-            alert('Shares added successfully!');
+            alert('Savings added successfully!');
             location.reload();
         } else {
             alert('Error: ' + (data.error || 'Unknown error'));
@@ -427,56 +436,41 @@ addSavingsBtn.addEventListener('click', function () {
     });
 });
 
-document.getElementById("searchSavings").addEventListener("keyup", function () {
-    let query = this.value.toLowerCase();
-    document.querySelectorAll("#membersTableBody .memberRow").forEach(row => {
-        let name = row.getAttribute("data-name");
-        let id = row.getAttribute("data-id");
-        let office = row.getAttribute("data-office");
-
-        row.style.display = name.includes(query) || id.includes(query) || office.includes(query) ? "" : "none";
-    });
-});
-
-
-document.querySelectorAll(".update-details-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        // ✅ DISPLAY: Proper employee_ID in the modal
-        document.getElementById("modalUpdateEmployeeID").textContent = this.dataset.employee_id;
-        // ✅ STORE the users.id in a hidden field for later fetch
-        document.getElementById("searchRemittanceBtn").setAttribute("data-user-update-id", this.dataset.id);
-        document.getElementById("modalUpdateName").textContent = this.dataset.name;
-        document.getElementById("modalUpdateOffice").textContent = this.dataset.office;
-        document.getElementById("modalUpdateContribution").textContent = this.dataset.contribution;
-        document.getElementById("modalUpdateFirstRemittance").textContent = this.dataset.firstRemittance;
-        document.getElementById("modalUpdateLatestRemittance").textContent = this.dataset.latestRemittance;
-        document.getElementById("modalUpdateTotalSavings").textContent = this.dataset.totalSavings;
-        document.getElementById("modalUpdateMonthsContributed").textContent = this.dataset.monthsContributed;
+document.addEventListener('click', function (e) {
+    const updateBtn = e.target.closest('.update-details-btn');
+    if (updateBtn) {
+        document.getElementById("modalUpdateEmployeeID").textContent = updateBtn.dataset.employee_id;
+        document.getElementById("searchRemittanceBtn").setAttribute("data-user-update-id", updateBtn.dataset.id);
+        document.getElementById("modalUpdateName").textContent = updateBtn.dataset.name;
+        document.getElementById("modalUpdateOffice").textContent = updateBtn.dataset.office;
+        document.getElementById("modalUpdateContribution").textContent = updateBtn.dataset.contribution;
+        document.getElementById("modalUpdateFirstRemittance").textContent = updateBtn.dataset.firstRemittance;
+        document.getElementById("modalUpdateLatestRemittance").textContent = updateBtn.dataset.latestRemittance;
+        document.getElementById("modalUpdateTotalSavings").textContent = updateBtn.dataset.totalSavings;
+        document.getElementById("modalUpdateMonthsContributed").textContent = updateBtn.dataset.monthsContributed;
 
         document.getElementById("searchRemittanceModal").value = "";
         document.getElementById("remittanceResult").innerHTML = "";
-    });
-});
+        return;
+    }
 
-
-document.querySelectorAll(".view-details-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        // ✅ DISPLAY: Proper employee_ID in the modal
-        document.getElementById("modalEmployeeID").textContent = this.dataset.employee_id;
-        // ✅ STORE the users.id in a hidden field for later fetch
-        document.getElementById("viewYearContributions").setAttribute("data-user-id", this.dataset.id);
-        document.getElementById("modalName").textContent = this.dataset.name;
-        document.getElementById("modalOffice").textContent = this.dataset.office;
-        document.getElementById("modalContribution").textContent = this.dataset.contribution;
-        document.getElementById("modalFirstRemittance").textContent = this.dataset.firstRemittance;
-        document.getElementById("modalLatestRemittance").textContent = this.dataset.latestRemittance;
-        document.getElementById("modalTotalSavings").textContent = this.dataset.totalSavings;
-        document.getElementById("modalMonthsContributed").textContent = this.dataset.monthsContributed;
+    const viewBtn = e.target.closest('.view-details-btn');
+    if (viewBtn) {
+        document.getElementById("modalEmployeeID").textContent = viewBtn.dataset.employee_id;
+        document.getElementById("viewYearContributions").setAttribute("data-user-id", viewBtn.dataset.id);
+        document.getElementById("modalName").textContent = viewBtn.dataset.name;
+        document.getElementById("modalOffice").textContent = viewBtn.dataset.office;
+        document.getElementById("modalContribution").textContent = viewBtn.dataset.contribution;
+        document.getElementById("modalFirstRemittance").textContent = viewBtn.dataset.firstRemittance;
+        document.getElementById("modalLatestRemittance").textContent = viewBtn.dataset.latestRemittance;
+        document.getElementById("modalTotalSavings").textContent = viewBtn.dataset.totalSavings;
+        document.getElementById("modalMonthsContributed").textContent = viewBtn.dataset.monthsContributed;
 
         document.getElementById("yearFilter").value = "";
         document.getElementById("contributionsResult").innerHTML = "";
-    });
+    }
 });
+
 
 document.getElementById("viewYearContributions").addEventListener("click", function () {
     let year = document.getElementById("yearFilter").value.trim();
@@ -683,13 +677,12 @@ document.addEventListener("click", function (e) {
 
 
 @if(session('error'))
-
-        document.addEventListener('DOMContentLoaded', function () {
-            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-            errorModal.show();
-        });
-
+    document.addEventListener('DOMContentLoaded', function () {
+        var errorModal = new bootstrap.Modal(document.getElementById('uploadErrorModal'));
+        errorModal.show();
+    });
 @endif
+
 
 
 });
