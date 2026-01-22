@@ -41,9 +41,9 @@ class LoansController extends Controller {
                 return [
                     'loan_id' => $loan->loan_id,
                     'employee_ID' => $loan->employee_ID,
-                    'employee_name' => $loan->user->name,
-                    'office' => $loan->user->office,
-                    'employment_status' => $loan->user->status,
+                    'employee_name' => optional($loan->user)->name ?? 'NA',
+                    'office' => optional($loan->user)->office ?? 'NA',
+                    'employment_status' => optional($loan->user)->status ?? 'NA',
                     'loan_type' => $loan->loan_type,
                     'loan_amount' => $loan->loan_amount,
                     'date_approved' => $loan->date_approved,

@@ -10,6 +10,7 @@ class LoanDetail extends Model
 {
     use HasFactory;
 
+    protected $table = 'loan_details';
     protected $primaryKey = 'loan_id';  // Loan ID as primary key
     public $incrementing = false;  // Prevent auto-increment
     protected $keyType = 'string';  // Ensure `loan_id` is treated as a string
@@ -24,8 +25,8 @@ class LoanDetail extends Model
 
     public function user()
     {
-        // loan_details.employee_ID  -> users.employee_id
-        return $this->belongsTo(User::class, 'employee_ID', 'employee_id');
+        // loan_details.employee_ID -> users.employee_ID
+        return $this->belongsTo(User::class, 'employee_ID', 'employee_ID');
     }
 
     public function loanPayments()
