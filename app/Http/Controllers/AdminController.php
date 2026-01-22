@@ -49,26 +49,65 @@ class AdminController extends Controller
         // View Members Method
         public function viewMembers(Request $request)
         {
-            $perPage = $request->get('per_page', 10);
+            $perPage = (int) $request->get('per_page', 10);
+            $search  = trim((string) $request->get('search', ''));
+            $status  = (string) $request->get('status', '');
+            $office  = (string) $request->get('office', '');
 
-            $members = User::where('is_admin', 0) // Only non-admin users
-            ->whereIn('status', ['Inactive', 'Active']) // Include both Approved and Inactive members
-            ->paginate($perPage);
+            $query = User::query()
+                ->where('is_admin', 0)
+                ->whereIn('status', ['Inactive', 'Active']);
 
-            $allMembers = User::select('id', 'name', 'office', 'status')->get();
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
+                });
+            }
 
-            $links = [
-                ['url' => route('admin.dashboard'), 'label' => 'Dashboard'],
-                ['url' => route('admin.members'), 'label' => 'Members'],
-                ['url' => '', 'label' => 'View Members']
-            ];
-        
-            // return view('admin.members', compact('members', 'links'));
-            // return view('admin.members', compact('members', 'perPage'));
-            return view('admin.members', compact('members', 'allMembers', 'perPage'));
+            if ($status !== '') {
+                $query->where('status', $status);
+            }
+
+            if ($office !== '') {
+                $query->where('office', $office);
+            }
+
+            $members = $query
+                ->orderBy('name')
+                ->paginate($perPage)
+                ->withQueryString();
+
+            // Offices for dropdown (optionally filtered by status)
+            $officesQuery = User::query()
+                ->where('is_admin', 0)
+                ->whereIn('status', ['Inactive', 'Active']);
+
+            if ($status !== '') {
+                $officesQuery->where('status', $status);
+            }
+
+            $offices = $officesQuery
+                ->select('office')
+                ->distinct()
+                ->orderBy('office')
+                ->pluck('office');
 
 
+            if ($request->ajax()) {
+                return response()->json([
+                    'table' => view('admin.partials.members_table', compact('members'))->render(),
+                    'pagination' => view('admin.partials.members_pagination', compact('members'))->render(),
+                    'officeOptions' => view('admin.partials.office_options', compact('offices'))->render(),
+                ]);
+            }
+
+
+            return view('admin.members', compact('members', 'perPage', 'offices'));
         }
+
 
 
         public function approveMember(Request $request, $id)
@@ -337,6 +376,13 @@ public function updateMember(Request $request, $id)
             return view('admin.loans', compact('loans'));
         }
 
-        
+        public function getUserDetails($id)
+    {
+        $user = User::where('employee_id', $id)->first();
+        if (! $user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        return response()->json($user);
+    }
 
 }

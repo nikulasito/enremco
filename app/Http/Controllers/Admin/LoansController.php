@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\LoanDetail;
 use Carbon\Carbon;
+use App\Models\Loan;
 use Illuminate\Support\Facades\Log;
 use App\Models\LoanPayment;
 

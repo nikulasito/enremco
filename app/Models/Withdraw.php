@@ -30,4 +30,9 @@ class Withdraw extends Model
         'covered_month'    => 'integer',
         'covered_year'     => 'integer',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'employees_id', 'id');
+    }
 }

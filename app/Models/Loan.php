@@ -14,9 +14,18 @@ class Loan extends Model
         'number_of_terms', 'date_loan_approved', 'monthly_payment'
     ];
 
-    // 🔹 Define the relationship with User (Member)
+    protected $table = 'loan_details';
+
+    // If your column is `employee_ID` (note uppercase), set $casts or $fillable accordingly.
+    // Relation: loans.employee_ID -> users.employee_id
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'employee_ID', 'employee_id');
+    }
+
+    // If you have member relation too
     public function member()
     {
-        return $this->belongsTo(User::class, 'member_id');
+        return $this->belongsTo(\App\Models\Member::class, 'member_id');
     }
 }

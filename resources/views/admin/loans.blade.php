@@ -163,9 +163,9 @@
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $loan->loan_id }}</td>
                         <td>{{ $loan->employee_ID }}</td>  <!-- ✅ Shows Account No. (employee_ID) -->
-                        <td>{{ $loan->user->name }}</td>
-                        <td>{{ $loan->user->office }}</td>
-                        <!-- <td>{{ $loan->user->status }}</td> -->
+                        <td>{{ optional($loan->user)->name ?? 'NA' }}</td>
+                        <td>{{ optional($loan->user)->office ?? 'NA' }}</td>
+                        <!-- <td>{{ optional($loan->user)->status ?? 'NA'}}</td> -->
                         <td>{{ $loan->loan_type }}</td>
                         <td>{{ $loan->loan_amount }}</td>
                         <td>{{ $loan->date_approved }}</td>
@@ -183,8 +183,8 @@
                             <button class="btn btn-info view-loan-btn"
                                 data-loan-id="{{ $loan->loan_id }}"
                                 data-employee-id="{{ $loan->employee_ID }}"
-                                data-employee-name="{{ $loan->user->name }}"
-                                data-office="{{ $loan->user->office }}"
+                                data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
+                                data-office="{{ optional($loan->user)->office ?? 'NA' }}"
                                 data-loan-type="{{ $loan->loan_type }}"
                                 data-loan-amount="{{ $loan->loan_amount }}"
                                 data-terms="{{ $loan->terms }}"
@@ -204,8 +204,8 @@
                             <button class="btn btn-warning update-loan-btn"
                                 data-loan-id="{{ $loan->loan_id }}"
                                 data-employee-id="{{ $loan->employee_ID }}"
-                                data-employee-name="{{ $loan->user->name }}"
-                                data-office="{{ $loan->user->office }}"
+                                data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
+                                data-office="{{ optional($loan->user)->office ?? 'NA' }}"
                                 data-loan-type="{{ $loan->loan_type }}"
                                 data-loan-amount="{{ $loan->loan_amount }}"
                                 data-terms="{{ $loan->terms }}"
@@ -334,23 +334,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let employeeInput = document.getElementById("employee_id");
 
-    if (employeeInput) { 
+    if (employeeInput) {
         employeeInput.addEventListener("keyup", function() {
             let employeeId = this.value.trim();
 
-            if (employeeId.length > 3) { 
-                fetch(`/admin/get-user-details/${employeeId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById("employee_name").value = data.name;
-                            document.getElementById("office").value = data.office;
-                        } else {
-                            document.getElementById("employee_name").value = "Not found";
-                            document.getElementById("office").value = "Not found";
-                        }
-                    })
-                    .catch(error => console.error("Error fetching user data:", error));
+            if (employeeId.length > 3) {
+                fetch(`/admin/get-user-details/${encodeURIComponent(employeeId)}`, {
+                    headers: { 'Accept': 'application/json' }
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        const text = await response.text();
+                        console.error("get-user-details non-ok:", response.status, text);
+                        document.getElementById("employee_name").value = "Not found";
+                        document.getElementById("office").value = "Not found";
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    if (data.success) {
+                        document.getElementById("employee_name").value = data.name || "";
+                        document.getElementById("office").value = data.office || "";
+                    } else {
+                        document.getElementById("employee_name").value = "Not found";
+                        document.getElementById("office").value = "Not found";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching user data:", error);
+                    document.getElementById("employee_name").value = "Not found";
+                    document.getElementById("office").value = "Not found";
+                });
             }
         });
     } else {
@@ -370,10 +386,20 @@ function setupCoMakerSearch(inputId, positionId, suggestionBoxId, errorId) {
                     let coMakerName = this.value.trim();
 
                     if (coMakerName.length > 2) {
-                        fetch(`/admin/get-co-maker/${coMakerName}`)
-                            .then(response => response.json())
+                        fetch(`/admin/get-co-maker/${encodeURIComponent(coMakerName)}`, {
+                            headers: { 'Accept': 'application/json' }
+                        })
+                            .then(async response => {
+                                if (!response.ok) {
+                                    const txt = await response.text();
+                                    console.error('get-co-maker non-ok:', response.status, txt);
+                                    return null;
+                                }
+                                return response.json();
+                            })
                             .then(data => {
                                 suggestionBox.innerHTML = "";
+                                if (!data) return;
                                 if (data.success && data.users.length > 0) {
                                     suggestionBox.style.display = "block";
                                     errorMessage.style.display = "none"; // Hide error
@@ -396,7 +422,11 @@ function setupCoMakerSearch(inputId, positionId, suggestionBoxId, errorId) {
                                     errorMessage.style.display = "block"; // Show error
                                 }
                             })
-                            .catch(error => console.error("Error fetching co-maker data:", error));
+                            .catch(error => {
+                                console.error("Error fetching co-maker data:", error);
+                                suggestionBox.style.display = "none";
+                                errorMessage.style.display = "block";
+                            });
                     } else {
                         suggestionBox.style.display = "none";
                         errorMessage.style.display = "none"; // Hide error
@@ -413,7 +443,6 @@ function setupCoMakerSearch(inputId, positionId, suggestionBoxId, errorId) {
 
             setupCoMakerSearch("co_maker_name", "co_maker_position", "co_maker_suggestions", "co_maker_error");
             setupCoMakerSearch("co_maker2_name", "co_maker2_position", "co_maker2_suggestions", "co_maker2_error");
-
 //for calculation
 function formatNumber(value) {
     return value.toFixed(2); // Removes commas
@@ -442,7 +471,6 @@ function calculateTotalDeduction() {
     if (monthlyPaymentField) monthlyPaymentField.value = formatNumber(monthlyPayment); // Auto-fill monthly payment
 }
 
-
 let inputs = ["old_balance", "lpp", "interest", "handling_fee", "petty_cash_loan", "loan_amount", "terms"];
 
 inputs.forEach(id => {
@@ -451,10 +479,6 @@ inputs.forEach(id => {
         inputField.addEventListener("input", calculateTotalDeduction);
     }
 });
-
-
-
-
 
 document.querySelectorAll(".update-loan-btn").forEach(button => {
         button.addEventListener("click", function () {
@@ -523,7 +547,7 @@ document.getElementById("updateLoanForm").addEventListener("submit", function (e
 
     let loanId = document.getElementById("update_loan_id").value;
 
-    fetch(`/admin/loans/update/${loanId}`, {
+    fetch(`/admin/loans/update/${encodeURIComponent(loanId)}`, {
         method: "POST",
         body: formData,
         headers: {
@@ -531,9 +555,10 @@ document.getElementById("updateLoanForm").addEventListener("submit", function (e
             "Accept": "application/json"
         },
     })
-    .then(response => {
+    .then(async response => {
         if (!response.ok) {
-            return response.text().then(text => { throw new Error(text); });
+            const text = await response.text();
+            throw new Error(text || 'Server error');
         }
         return response.json();
     })
@@ -544,9 +569,11 @@ document.getElementById("updateLoanForm").addEventListener("submit", function (e
             modal.hide();
 
             let row = document.querySelector(`button[data-loan-id="${loanId}"]`).closest("tr");
-            row.querySelector("td:nth-child(8)").textContent = data.loan.loan_amount; 
-            row.querySelector("td:nth-child(12)").textContent = data.loan.monthly_payment; 
-
+            if (row) {
+                // adjust column indices if your table layout changes
+                row.querySelector("td:nth-child(8)").textContent = data.loan.loan_amount; 
+                row.querySelector("td:nth-child(12)").textContent = data.loan.monthly_payment; 
+            }
         } else {
             console.error("⚠️ Error updating loan:", data.message);
         }
@@ -557,22 +584,28 @@ document.getElementById("updateLoanForm").addEventListener("submit", function (e
 });
 
 
-
 //Search
 let searchInput = document.getElementById("search_loans");
 
     searchInput.addEventListener("keyup", function () {
         let query = this.value.trim();
 
-        fetch(`/admin/loans/search?q=${query}`, {
+        fetch(`/admin/loans/search?q=${encodeURIComponent(query)}`, {
             headers: { "Accept": "application/json" }
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) {
+                const txt = await response.text();
+                console.error('loans/search non-ok:', response.status, txt);
+                return [];
+            }
+            return response.json();
+        })
         .then(data => {
             let tableBody = document.getElementById("loanTableBody");
             tableBody.innerHTML = ""; // Clear the table
 
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="18" class="text-center">No results found</td></tr>`;
                 return;
             }
@@ -635,6 +668,5 @@ document.querySelectorAll(".view-loan-btn").forEach(button => {
 
 });
 </script>
-
 
 </x-admin-layout>

@@ -15,41 +15,53 @@
         </div>
     @endif
     <!-- Search Field and Filters -->
-    <div class="mb-4 d-flex align-items-center justify-content-between search-filter">
+    <form method="GET" action="{{ route('admin.members') }}" id="filtersForm"
+      class="mb-4 d-flex align-items-center justify-content-between search-filter">
+
         <input
             type="text"
             id="searchInput"
+            name="search"
             class="form-control w-50"
             placeholder="Search members..."
+            value="{{ request('search') }}"
         />
 
         <div class="mt-3">
-            <select id="statusFilter" class="form-select">
+            <select id="statusFilter" name="status" class="form-select">
                 <option value="">Filter by Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="Active" {{ request('status') === 'Active' ? 'selected' : '' }}>Active</option>
+                <option value="Inactive" {{ request('status') === 'Inactive' ? 'selected' : '' }}>Inactive</option>
             </select>
         </div>
 
         <div class="mt-3">
-            <select id="officeFilter" class="form-select">
-                <option value="">Filter by Office</option>
-                <!-- Office options will be populated dynamically -->
+            <select id="officeFilter" name="office" class="form-select">
+                @include('admin.partials.office_options', ['offices' => $offices])
             </select>
         </div>
 
         <div class="mt-3">
-            <button id="clearFilters" class="btn btn-secondary">Clear Filters</button>
+            <button type="button" id="clearFilters" class="btn btn-secondary">Clear Filters</button>
         </div>
-    </div>
+
+        {{-- keep per_page in the same form so AJAX reads it --}}
+        <input type="hidden" name="per_page" id="per_page_hidden" value="{{ $perPage }}">
+    </form>
+
+
 
 
 
     <!-- Members Table -->
     <div id="membersTable">
         <form method="GET" action="{{ route('admin.members') }}" class="d-flex align-items-center mb-3">
+            <input type="hidden" name="search" value="{{ request('search') }}">
+            <input type="hidden" name="status" value="{{ request('status') }}">
+            <input type="hidden" name="office" value="{{ request('office') }}">
+
             <label for="per_page" class="me-2">Show:</label>
-            <select name="per_page" id="per_page" class="form-select w-auto me-2" onchange="this.form.submit()">
+            <select id="per_page" class="form-select w-auto me-2">
                 @foreach ([10, 20, 50, 100] as $option)
                     <option value="{{ $option }}" {{ $perPage == $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
@@ -119,140 +131,149 @@
         </div>
     </div>
 </div>
-<div class="mt-4">
-            {{ $members->appends(['per_page' => $perPage])->links() }}
-        </div>
+    <div class="mt-4" id="membersPagination">
+        {{ $members->appends(request()->except('page'))->links() }}
+    </div>
 </div>
 
 <script>
-     const members = @json($members->items());
-//fetch content dynamically
 document.addEventListener('DOMContentLoaded', () => {
-        const updateModal = document.getElementById('updateMemberModal');
+    // ===== KEEP YOUR MODAL FETCH CODE (unchanged) =====
+    const updateModal = document.getElementById('updateMemberModal');
+    updateModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const url = button.getAttribute('data-url');
+        const modalBody = document.getElementById('updateMemberModalBody');
 
-        updateModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget; // Button that triggered the modal
-            const url = button.getAttribute('data-url'); // URL for the update form
-            const modalBody = document.getElementById('updateMemberModalBody');
+        modalBody.innerHTML = '<p>Loading...</p>';
 
-            // Show loading state
-            modalBody.innerHTML = '<p>Loading...</p>';
+        fetch(url)
+            .then(r => {
+                if (!r.ok) throw new Error('Network response was not ok');
+                return r.text();
+            })
+            .then(html => modalBody.innerHTML = html)
+            .catch(err => modalBody.innerHTML = `<p class="text-danger">Error loading content: ${err.message}</p>`);
+    });
 
-            // Fetch the content from the server
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.text();
-                })
-                .then(html => {
-                    modalBody.innerHTML = html; // Insert the fetched form into the modal body
-                })
-                .catch(error => {
-                    modalBody.innerHTML = `<p class="text-danger">Error loading content: ${error.message}</p>`;
-                });
+    // ===== NEW: AJAX SEARCH/FILTER/PAGINATION (NO PAGE REFRESH) =====
+    const filtersForm = document.getElementById('filtersForm');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const officeFilter = document.getElementById('officeFilter');
+    const clearBtn = document.getElementById('clearFilters');
+
+    const membersTableEl = document.getElementById('membersTable');
+    const paginationEl = document.getElementById('membersPagination');
+
+    const perPageHidden = document.getElementById('per_page_hidden');
+
+    let debounceTimer = null;
+    let abortController = null;
+
+    function buildUrl() {
+        const params = new URLSearchParams(new FormData(filtersForm));
+        return `${filtersForm.action}?${params.toString()}`;
+    }
+
+    function bindPerPageListener() {
+        const perPageSelect = document.getElementById('per_page');
+        if (!perPageSelect) return;
+
+        perPageSelect.addEventListener('change', () => {
+            perPageHidden.value = perPageSelect.value; // sync hidden field used by filtersForm
+            requestUpdate();
         });
+    }
+
+    async function loadAndReplace(url) {
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+
+        // light loading state to avoid “jitter”
+        membersTableEl.style.opacity = '0.6';
+        paginationEl.style.opacity = '0.6';
+
+        const resp = await fetch(url, { signal: abortController.signal }); // IMPORTANT: no form submit
+        if (!resp.ok) throw new Error('Failed to load');
+
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const newMembersTable = doc.getElementById('membersTable');
+        const newPagination = doc.getElementById('membersPagination');
+        const newOfficeFilter = doc.getElementById('officeFilter');
+
+        if (newMembersTable) membersTableEl.innerHTML = newMembersTable.innerHTML;
+        if (newPagination) paginationEl.innerHTML = newPagination.innerHTML;
+
+        // Optional: keep office options in sync if your controller updates them based on status
+        if (newOfficeFilter) {
+            const selectedOffice = officeFilter.value;
+            officeFilter.innerHTML = newOfficeFilter.innerHTML;
+            if ([...officeFilter.options].some(o => o.value === selectedOffice)) {
+                officeFilter.value = selectedOffice;
+            }
+        }
+
+        membersTableEl.style.opacity = '1';
+        paginationEl.style.opacity = '1';
+
+        // Rebind because #membersTable was replaced (events on #per_page get lost)
+        bindPerPageListener();
+
+        // Update URL without reload
+        window.history.pushState({}, '', url);
+    }
+
+    function requestUpdate(urlOverride = null) {
+        const url = urlOverride || buildUrl();
+        loadAndReplace(url).catch(err => {
+            if (err.name === 'AbortError') return;
+            console.error(err);
+            membersTableEl.style.opacity = '1';
+            paginationEl.style.opacity = '1';
+        });
+    }
+
+    // Prevent any normal submit
+    filtersForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        requestUpdate();
+    });
+
+    // Debounced search
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => requestUpdate(), 300);
+    });
+
+    statusFilter.addEventListener('change', () => requestUpdate());
+    officeFilter.addEventListener('change', () => requestUpdate());
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        statusFilter.value = '';
+        officeFilter.value = '';
+        requestUpdate();
+    });
+
+    // AJAX pagination clicks
+    paginationEl.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (!link) return;
+        e.preventDefault();
+        requestUpdate(link.href);
+    });
+
+    // Initial bind
+    bindPerPageListener();
+
+    // Back/forward support
+    window.addEventListener('popstate', () => {
+        requestUpdate(window.location.href);
+    });
 });
-
-
-
-// Populate Office Filter Based on Selected Status
-function populateOfficeFilter(selectedStatus = "") {
-    const officeFilter = document.getElementById("officeFilter");
-
-    officeFilter.innerHTML = '<option value="">Filter by Office</option>'; // Reset options
-
-    // Get unique offices from members whose status matches the selected one
-    const offices = [...new Set(
-        members
-            .filter(member => !selectedStatus || member.status === selectedStatus)
-            .map(member => member.office)
-    )];
-
-    // Populate office filter dropdown
-    offices.forEach(office => {
-        const option = document.createElement("option");
-        option.value = office;
-        option.textContent = office;
-        officeFilter.appendChild(option);
-    });
-}
-
-// Filter and Display Members Based on Status and Office
-function filterAndDisplay() {
-    const query = document.getElementById("searchInput").value.toLowerCase();
-    const statusFilter = document.getElementById("statusFilter").value;
-    const officeFilter = document.getElementById("officeFilter").value;
-
-    const filteredMembers = members.filter(member => {
-        const matchesQuery = 
-            member.name.toLowerCase().includes(query) ||
-            (member.email && member.email.toLowerCase().includes(query));
-
-        const matchesStatus = !statusFilter || member.status === statusFilter;
-        const matchesOffice = !officeFilter || member.office === officeFilter;
-
-        return matchesQuery && matchesStatus && matchesOffice;
-    });
-
-    const tbody = document.querySelector("#membersTable tbody");
-    tbody.innerHTML = "";
-
-        const formatDate = (date) => {
-        if (!date) return 'N/A';
-        const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
-        return new Intl.DateTimeFormat('en-US', options).format(new Date(date));
-    };
-
-    filteredMembers.forEach(member => {
-        const row = `
-            <tr>
-                <td>${filteredMembers.indexOf(member) + 1}</td>
-                <td>${member.employee_ID}</td>
-                <td>${member.name}</td>
-                <td>${member.office}</td>
-                <td>
-                    <span style="color: ${member.status === "Active" ? "green" : "red"}">
-                        ${member.status}
-                    </span>
-                </td>
-                <td>${formatDate(member.date_approved)}</td>
-                <td>${formatDate(member.date_inactive)}</td>
-                <td>${formatDate(member.date_reactive)}</td>
-                <td>
-                    <button class="btn btn-primary btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#updateMemberModal"
-                        data-url="/admin/members/${member.id}/edit">
-                        Update
-                    </button>
-                </td>
-            </tr>
-        `;
-        tbody.innerHTML += row;
-    });
-}
-
-// Reset Filters and Reload Members
-document.getElementById("clearFilters").addEventListener("click", function () {
-    document.getElementById("searchInput").value = "";
-    document.getElementById("statusFilter").value = "";
-    document.getElementById("officeFilter").value = "";
-    populateOfficeFilter();
-    filterAndDisplay();
-});
-
-// Event Listeners for Filters
-document.getElementById("searchInput").addEventListener("input", filterAndDisplay);
-document.getElementById("statusFilter").addEventListener("change", function () {
-        populateOfficeFilter(this.value);
-        filterAndDisplay();
-    });
-document.getElementById("officeFilter").addEventListener("change", filterAndDisplay);
-
-// Populate Office Filter on Page Load
-populateOfficeFilter();
-
 </script>
+
 </x-admin-layout>

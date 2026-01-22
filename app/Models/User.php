@@ -62,6 +62,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'date_approved' => 'datetime',
+            'date_inactive' => 'datetime',
+            'date_reactive' => 'datetime',
         ];
     }
 
@@ -84,20 +86,15 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function loans()
     {
-        return $this->hasMany(Loan::class, 'member_id');
+        // Switched to LoanDetail as it contains the complete logic for loan_details table
+        return $this->hasMany(LoanDetail::class, 'employee_ID', 'employee_id');
     }
 
     public function withdrawals()
     {
-        return $this->hasMany(\App\Models\Withdrawal::class, 'employees_id', 'id');
+        // Fixed class name from Withdrawal to Withdraw
+        return $this->hasMany(\App\Models\Withdraw::class, 'employees_id', 'id');
     }
-
-    protected $casts = [
-        'date_approved' => 'datetime',
-        'date_inactive' => 'datetime',
-        'date_reactive' => 'datetime',
-    ];
-
 
 
         // Mutators for automatically converting attributes to uppercase

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class LoanDetail extends Model
 {
@@ -23,7 +24,8 @@ class LoanDetail extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'employee_ID', 'employee_ID');
+        // loan_details.employee_ID  -> users.employee_id
+        return $this->belongsTo(User::class, 'employee_ID', 'employee_id');
     }
 
     public function loanPayments()

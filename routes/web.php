@@ -14,6 +14,9 @@ use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Models\User;
 use Dompdf\Dompdf;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -232,11 +235,23 @@ Route::put('/profile/changepassword', [ProfileController::class, 'changepassword
     ->name('password.update');
 
 
-Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+// Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+//     ->middleware('guest')
+//     ->name('password.request');
+
+// Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+//     ->middleware('guest')
+//     ->name('password.email');
+
+
+
+// Show "Forgot Password" page
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
     ->middleware('guest')
     ->name('password.request');
 
-Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+// Handle form submission to send reset email
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
     ->middleware('guest')
     ->name('password.email');
 
@@ -247,8 +262,6 @@ Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
 Route::post('/reset-password', [NewPasswordController::class, 'store'])
     ->middleware('guest')
     ->name('password.update');
-
-
 
 
 Route::match(['PUT', 'PATCH'], '/profile/update', [ProfileController::class, 'update'])->name('profile.update');
@@ -299,7 +312,7 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
 
 Route::get('/user/pdf/{id}', [RegisteredUserController::class, 'generatePdf'])->name('user.pdf');
 
-
+Route::get('/admin/get-user-details/{id}', [AdminController::class, 'getUserDetails']);
 
 
 
