@@ -94,13 +94,23 @@
                 <tbody id="loanPaymentTable">
                     @foreach ($loans as $index => $loan)
                         @if ($loan->latest_outstanding_balance > 0) <!-- ✅ Hide loans with zero balance -->
-                            <tr class="loanPaymentRow" data-name="{{ strtolower($loan->user->name) }}" data-id="{{ strtolower($loan->employee_id) }}" data-office="{{ strtolower($loan->user->office) }}" data-loan-id="{{ $loan->loan_id }}">
+                            @php
+                                $userName = strtolower(optional($loan->user)->name ?? '');
+                                $userOffice = strtolower(optional($loan->user)->office ?? '');
+                                $empId = strtolower($loan->employee_ID ?? '');
+                            @endphp
+
+                            <tr class="loanPaymentRow"
+                                data-name="{{ $userName }}"
+                                data-id="{{ $empId }}"
+                                data-office="{{ $userOffice }}"
+                                data-loan-id="{{ $loan->loan_id }}">
                                 <td><input type="checkbox"></td>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $loan->loan_id }}</td>
                                 <td>{{ $loan->employee_ID }}</td>
-                                <td>{{ $loan->user->name }}</td>
-                                <td>{{ $loan->user->office }}</td>
+                                <td>{{ optional($loan->user)->name ?? 'NA' }}</td>
+                                <td>{{ optional($loan->user)->office ?? 'NA' }}</td>
                                 <td>{{ $loan->loan_type }}</td>
                                 <td>{{ number_format($loan->loan_amount, 2) }}</td>
                                 <td>{{ $loan->terms }}</td>
@@ -128,8 +138,8 @@
                                 <td>
                                     <button class="btn btn-warning btn-sm update-payment-btn"
                                         data-loan-id="{{ $loan->loan_id }}"
-                                        data-employee-id="{{ $loan->employee_id }}"
-                                        data-employee-name="{{ $loan->user->name }}"
+                                        data-employee-id="{{ $loan->employee_ID }}"
+                                        data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
                                         data-loan-type="{{ $loan->loan_type }}"
                                         data-monthly-payment="{{ $loan->monthly_payment }}"
                                         data-remittance-no="{{ optional($loan->latestPayment)->remittance_no }}"
