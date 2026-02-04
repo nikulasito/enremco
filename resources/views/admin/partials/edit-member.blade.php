@@ -1,128 +1,173 @@
-<form method="POST" id="updateMemberForm" action="{{ route('admin.update-member', $member->id) }}">
+<form method="POST" id="updateMemberForm" action="{{ route('admin.update-member', $member->id) }}" class="min-h-full">
     @csrf
     @method('PATCH')
 
-    <div class="mb-3 member-details">
-        <div class="profile-container">
-            <div class="row">
-                <div class="profile-left col-md-auto">
-                    <div class="profile-photo">
-                        <img src="{{ asset('storage/' . $member->photo) }}" alt="User Photo">
+    <div class="p-8 space-y-8">
+        {{-- Top identity --}}
+        <div class="flex items-start gap-5">
+            <div class="shrink-0">
+                @php
+                    $photo = $member->photo ? asset('storage/' . $member->photo) : null;
+                @endphp
+
+                @if($photo)
+                    <img src="{{ $photo }}"
+                        class="h-20 w-20 rounded-full object-cover border border-[#dce5e0] dark:border-[#2a3a32]" />
+                @else
+                    <div class="h-20 w-20 rounded-full bg-[#f6f8f7] dark:bg-black/20 border border-[#dce5e0] dark:border-[#2a3a32]
+                                    flex items-center justify-center text-[#638875] dark:text-[#a0b0a8] font-black">
+                        {{ strtoupper(substr($member->name ?? 'U', 0, 1)) }}
+                    </div>
+                @endif
+            </div>
+
+            <div class="flex-1">
+                <p class="text-sm font-black text-[#638875] dark:text-[#a0b0a8]">Member</p>
+                <h4 class="text-lg font-black">{{ $member->name ?? '—' }}</h4>
+                <p class="text-sm text-[#638875] dark:text-[#a0b0a8]">
+                    {{ $member->employee_ID ?? '—' }} • {{ $member->office ?? '—' }}
+                </p>
+            </div>
+        </div>
+
+        {{-- READ-ONLY DETAILS (NO INPUTS) --}}
+        <div class="space-y-4">
+            <h5 class="text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                Member Details (Read-only)
+            </h5>
+
+            <div class="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+                {{-- Left --}}
+                <div class="space-y-5">
+                    @php
+                        $box = "mt-1 rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-[#f6f8f7] dark:bg-black/20 px-4 py-2.5 text-sm";
+                        $lbl = "text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]";
+                    @endphp
+
+                    <div>
+                        <div class="{{ $lbl }}">Employee ID</div>
+                        <div class="{{ $box }}">{{ $member->employee_ID ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Email</div>
+                        <div class="{{ $box }}">{{ $member->email ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Position</div>
+                        <div class="{{ $box }}">{{ $member->position ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Address</div>
+                        <div class="{{ $box }}">{{ $member->address ?? '—' }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="{{ $lbl }}">Sex</div>
+                            <div class="{{ $box }}">{{ $member->sex ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="{{ $lbl }}">Marital Status</div>
+                            <div class="{{ $box }}">{{ $member->marital_status ?? '—' }}</div>
+                        </div>
                     </div>
                 </div>
-                <div class="profile-right col-5">
-                    <div class="personal-data">
-                        <h4>Personal Data</h4>
-                        <ul>
-                            <li><strong>Name:</strong> {{ $member->name }}</li>
-                            <li><strong>Email:</strong> {{ $member->email }}</li>
-                            <li><strong>Position:</strong> {{ $member->position }}</li>
-                            <li><strong>Address:</strong> {{ $member->address }}</li>
-                            <li><strong>Sex:</strong> {{ $member->sex }}</li>
-                            <li><strong>Marital Status:</strong> {{ $member->marital_status }}</li>
-                            <li><strong>Office:</strong> {{ $member->office }}</li>
-                            <li><strong>Contact No.:</strong> {{ $member->contact_no }}</li>
-                            <li><strong>Annual Income:</strong> {{ $member->annual_income }}</li>
-                            <li><strong>Beneficiary/ies:</strong> {{ $member->beneficiaries }}</li>
-                            <li><strong>Birthdate:</strong> {{ $member->birthdate }}</li>
-                            <li><strong>Educational Attainment:</strong> {{ $member->education }}</li>
-                            <li><strong>Employee ID:</strong> {{ $member->employee_ID }}</li>
-                            <li><strong>Membership Date:</strong> {{ $member->membership_date }}</li>
-                            <li><strong>Username:</strong> {{ $member->username }}</li>
-                            <li><strong>Status:</strong>
-                                <span class="font-semibold {{ $member->status === 'Active' ? 'text-green-500' : 'text-red-500' }}">
-                                    {{ $member->status }}
-                                </span>
-                            </li>
-                        </ul>
+
+                {{-- Right --}}
+                <div class="space-y-5">
+                    <div>
+                        <div class="{{ $lbl }}">Office</div>
+                        <div class="{{ $box }}">{{ $member->office ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Contact No.</div>
+                        <div class="{{ $box }}">{{ $member->contact_no ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Annual Income</div>
+                        <div class="{{ $box }}">{{ $member->annual_income ?? '—' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="{{ $lbl }}">Beneficiary/ies</div>
+                        <div class="{{ $box }}">{{ $member->beneficiaries ?? '—' }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="{{ $lbl }}">Birthdate</div>
+                            <div class="{{ $box }}">
+                                {{ $member->birthdate ? \Carbon\Carbon::parse($member->birthdate)->format('M d, Y') : '—' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="{{ $lbl }}">Education</div>
+                            <div class="{{ $box }}">{{ $member->education ?? '—' }}</div>
+                        </div>
                     </div>
                 </div>
-                <div class="contribution-details col">
-                    <h4>Contribution Details</h4>
-                    <ul>
-                        <li><strong>Shares:</strong> {{ $member->shares }}</li>
-                        <li><strong>Savings:</strong> {{ $member->savings }}</li>
-                    </ul>
+            </div>
+        </div>
+
+        {{-- EDITABLE FIELDS ONLY --}}
+        <div class="space-y-4 pt-6 border-t border-[#dce5e0] dark:border-[#2a3a32]">
+            <h5 class="text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                Editable Fields
+            </h5>
+
+            <div class="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+                <div>
+                    <label class="{{ $lbl }}">Shares</label>
+                    <input type="number" name="shares" step="any" min="0"
+                        class="w-full rounded-lg border-[#dce5e0] bg-white py-2.5 px-4 text-sm focus:border-primary focus:ring-primary dark:border-[#2a3a32] dark:bg-[#112119] dark:text-white"
+                        value="{{ old('shares', $member->shares) }}">
+                </div>
+
+                <div>
+                    <label class="{{ $lbl }}">Savings</label>
+                    <input type="number" name="savings" step="any" min="0"
+                        class="w-full rounded-lg border-[#dce5e0] bg-white py-2.5 px-4 text-sm focus:border-primary focus:ring-primary dark:border-[#2a3a32] dark:bg-[#112119] dark:text-white"
+                        value="{{ old('savings', $member->savings) }}">
+                </div>
+
+                <div>
+                    <label class="{{ $lbl }}">Date of Membership</label>
+                    <input type="date" name="membership_date"
+                        class="w-full rounded-lg border-[#dce5e0] bg-white py-2.5 px-4 text-sm focus:border-primary focus:ring-primary dark:border-[#2a3a32] dark:bg-[#112119] dark:text-white"
+                        value="{{ old('membership_date', $member->membership_date ? \Carbon\Carbon::parse($member->membership_date)->format('Y-m-d') : '') }}">
+                </div>
+
+                <div>
+                    <label class="{{ $lbl }}">Status</label>
+                    <select name="status"
+                        class="w-full rounded-lg border-[#dce5e0] bg-white py-2.5 px-4 text-sm focus:border-primary focus:ring-primary dark:border-[#2a3a32] dark:bg-[#112119] dark:text-white">
+                        <option value="Active" {{ old('status', $member->status) === 'Active' ? 'selected' : '' }}>Active
+                        </option>
+                        <option value="Inactive" {{ old('status', $member->status) === 'Inactive' ? 'selected' : '' }}>
+                            Inactive</option>
+                    </select>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="mb-3">
-        <label for="shares" class="form-label">Shares</label>
-        <input type="number" name="shares" class="form-control" id="shares" value="{{ $member->shares }}" step="any" min="0">
+    {{-- Sticky footer (always visible) --}}
+    <div class="sticky bottom-0 flex items-center justify-end gap-4 border-t border-[#dce5e0] bg-[#f6f8f7] px-8 py-5
+                dark:border-[#2a3a32] dark:bg-sidebar-dark/30">
+        <button type="button"
+            class="rounded-lg px-6 py-2.5 text-sm font-black text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/5"
+            data-modal-close="updateMemberModal">
+            Cancel
+        </button>
+
+        <button type="submit"
+            class="rounded-lg bg-primary px-8 py-2.5 text-sm font-black text-[#112119] transition-all hover:brightness-110">
+            Save Changes
+        </button>
     </div>
-
-    <div class="mb-3">
-        <label for="savings" class="form-label">Savings</label>
-        <input type="number" name="savings" class="form-control" id="savings" value="{{ $member->savings }}" step="any" min="0">
-    </div>
-
-    <div class="mb-3">
-        <label for="membership_date" class="form-label">Date of Membership</label>
-        <input type="date" name="membership_date" class="form-control" id="membership_date" value="{{ $member->membership_date ?? '' }}">
-    </div>
-
-    <div class="mb-3">
-        <label for="status" class="form-label">Status</label>
-        <select name="status" id="status" class="form-control">
-            <option value="Active" {{ $member->status === 'Active' ? 'selected' : '' }}>Active</option>
-            <option value="Inactive" {{ $member->status === 'Inactive' ? 'selected' : '' }}>Inactive</option>
-        </select>
-    </div>
-
-    <!-- Submit button to save changes -->
-    <button type="submit" class="btn btn-primary">Update</button>
-
-    <!-- Cancel button to go back to the members page -->
-    <a href="{{ route('admin.members') }}" class="btn btn-secondary">Cancel</a>
 </form>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("updateMemberForm").addEventListener("submit", function(event) {
-        event.preventDefault();  // ✅ Prevent default form submission
-
-        const form = event.target;
-        const formData = new FormData(form);
-        const memberId = form.getAttribute("action").split("/").pop();
-
-        fetch(form.action, {
-            method: "POST",
-            headers: { 
-                "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: formData
-        })
-        .then(response => response.json()) // ✅ Parse JSON response
-        .then(data => {
-            //console.log("✅ AJAX Response:", data); // Debugging output
-
-            if (data.success) {
-                alert("✅ Member updated successfully!");
-
-                // ✅ Update the table row dynamically
-                const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-                if (row) {
-                    row.querySelector(".status").textContent = data.status;
-                    row.querySelector(".date-inactive").textContent = data.date_inactive ? data.date_inactive : 'N/A';
-                    row.querySelector(".date-reactive").textContent = data.date_reactive ? data.date_reactive : 'N/A';
-                }
-
-                // ✅ Close the modal after update
-                bootstrap.Modal.getInstance(document.getElementById("updateMemberModal")).hide();
-            } else {
-                alert("❌ Error updating member: " + data.error);
-            }
-        })
-        .catch(error => {
-            alert("❌ An error occurred while updating the member.");
-            console.error("Error:", error);
-        });
-    });
-});
-</script>
-
-

@@ -62,11 +62,25 @@ Route::post('/login', [LoginController::class, 'login'])->name('login');
 // Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth'])->name('dashboard');
 
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+
+    Route::get('/admin/members', [AdminController::class, 'viewMembers'])->name('admin.members');
+
+    Route::get('/admin/members/{id}/edit', [AdminController::class, 'editMember'])->name('admin.edit-member');
+
+    // ✅ keep only ONE update route + name
+    Route::patch('/admin/members/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
+
+    Route::get('/admin/new-members', [AdminController::class, 'newMembers'])->name('admin.new-members');
+    Route::patch('/admin/approve-member/{id}', [AdminController::class, 'approveMember'])->name('admin.approve-member');
+    Route::patch('/admin/disapprove-member/{id}', [AdminController::class, 'disapproveMember'])->name('admin.disapprove-member');
+
+    Route::delete('/admin/delete-member/{id}', [AdminController::class, 'deleteMember'])->name('admin.delete-member');
+});
 
 // Admin routes with middleware applied directly
 Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/admin/members', [AdminController::class, 'viewMembers'])->name('admin.members');
 });
 
 //Shares
@@ -208,8 +222,6 @@ Route::patch('/admin/approve-member/{id}', [AdminController::class, 'approveMemb
 //Route::get('/admin/edit-member/{id}', [AdminController::class, 'editMember'])->name('admin.edit-member');
 Route::get('/admin/members/{id}/edit', [AdminController::class, 'editMember'])->name('admin.edit-member');
 
-Route::patch('/admin/update-member/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
-
 Route::delete('/admin/delete-member/{id}', [AdminController::class, 'deleteMember'])->name('admin.delete-member');
 
 Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
@@ -225,10 +237,6 @@ Route::middleware(['guest'])->group(function () {
 // Route::post('/register', [RegisteredUserController::class, 'store']);
 Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
 Route::get('/user/preview/{id}', [RegisteredUserController::class, 'preview'])->name('user.preview');
-
-
-//Route::patch('/admin/members/{id}/approve', [AdminController::class, 'approveMember'])->name('admin.members.approve');
-Route::patch('/admin/members/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
 
 
 // Route::get('/profile', [ProfileController::class, 'show'])->middleware(['auth', 'verified'])->name('profile');
@@ -293,18 +301,6 @@ Route::get('/verify-email-info', function () {
     return view('auth.verify_modal');
 });
 
-
-Route::post('/admin/approve-member/{id}', function ($id) {
-    $user = User::findOrFail($id);
-
-    // Update the status to approved
-    $user->update(['status' => 'Active']);
-
-    // Send email for verification
-    $user->sendEmailVerificationNotification();
-
-    return back()->with('success', 'Member approved and verification email sent.');
-})->name('admin.approve_member');
 
 Route::patch('/admin/disapprove-member/{id}', [AdminController::class, 'disapproveMember'])->name('admin.disapprove-member');
 

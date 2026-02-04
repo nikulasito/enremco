@@ -98,27 +98,63 @@ class AdminController extends Controller
     public function viewMembers(Request $request)
     {
         $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 10;
+
         $search = trim((string) $request->get('search', ''));
-        $status = (string) $request->get('status', '');
-        $office = (string) $request->get('office', '');
+        $status = trim((string) $request->get('status', ''));
+        $office = trim((string) $request->get('office', ''));
 
+        // Detect employee id column safely (your app has mixed naming in places)
+        $empCol = null;
+        foreach (['employee_ID', 'employees_id', 'employee_id'] as $col) {
+            if (Schema::hasColumn('users', $col)) {
+                $empCol = $col;
+                break;
+            }
+        }
+
+        // Status sets
+        $activeSet = ['Active', 'active'];
+        $inactiveSet = ['Inactive', 'inactive'];
+
+        // Treat "Pending" as both Pending + Awaiting Approval (matches your newMembers())
+        $pendingSet = ['Pending', 'pending', 'Awaiting Approval', 'awaiting approval', 'Awaiting approval'];
+
+        // Base query
         $query = User::query()
-            ->where('is_admin', 0)
-            ->whereIn('status', ['Inactive', 'Active']);
+            ->where('is_admin', '!=', 1)
+            ->whereIn('status', array_merge($activeSet, $inactiveSet, $pendingSet));
 
+        // Search
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $query->where(function ($q) use ($search, $empCol) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('employee_ID', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('office', 'like', "%{$search}%");
+
+                if ($empCol) {
+                    $q->orWhere($empCol, 'like', "%{$search}%");
+                }
             });
         }
 
+        // Status filter (normalized)
         if ($status !== '') {
-            $query->where('status', $status);
+            $s = strtolower($status);
+
+            if ($s === 'active') {
+                $query->whereIn('status', $activeSet);
+            } elseif ($s === 'inactive') {
+                $query->whereIn('status', $inactiveSet);
+            } elseif ($s === 'pending') {
+                $query->whereIn('status', $pendingSet);
+            } else {
+                // fallback exact match
+                $query->where('status', $status);
+            }
         }
 
+        // Office filter
         if ($office !== '') {
             $query->where('office', $office);
         }
@@ -128,33 +164,38 @@ class AdminController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // Offices for dropdown (optionally filtered by status)
+        // Offices list (keep consistent with current status filter)
         $officesQuery = User::query()
-            ->where('is_admin', 0)
-            ->whereIn('status', ['Inactive', 'Active']);
+            ->where('is_admin', '!=', 1)
+            ->whereIn('status', array_merge($activeSet, $inactiveSet, $pendingSet));
 
         if ($status !== '') {
-            $officesQuery->where('status', $status);
+            $s = strtolower($status);
+
+            if ($s === 'active') {
+                $officesQuery->whereIn('status', $activeSet);
+            } elseif ($s === 'inactive') {
+                $officesQuery->whereIn('status', $inactiveSet);
+            } elseif ($s === 'pending') {
+                $officesQuery->whereIn('status', $pendingSet);
+            } else {
+                $officesQuery->where('status', $status);
+            }
         }
 
         $offices = $officesQuery
+            ->whereNotNull('office')
             ->select('office')
             ->distinct()
             ->orderBy('office')
             ->pluck('office');
 
-
-        if ($request->ajax()) {
-            return response()->json([
-                'table' => view('admin.partials.members_table', compact('members'))->render(),
-                'pagination' => view('admin.partials.members_pagination', compact('members'))->render(),
-                'officeOptions' => view('admin.partials.office_options', compact('offices'))->render(),
-            ]);
-        }
-
-
+        // IMPORTANT:
+        // Your new Tailwind page uses fetch() and parses HTML,
+        // so DO NOT return JSON for ajax here.
         return view('admin.members', compact('members', 'perPage', 'offices'));
     }
+
 
 
 
@@ -321,61 +362,60 @@ class AdminController extends Controller
     public function editMember($id)
     {
         $member = User::findOrFail($id);
-        return view('admin.partials.edit-member', compact('member')); // Return the update form partial view
+
+        $offices = User::where('is_admin', 0)
+            ->select('office')->distinct()->orderBy('office')->pluck('office');
+
+        return view('admin.partials.edit-member', compact('member', 'offices'));
     }
+
 
     public function updateMember(Request $request, $id)
     {
-        try {
-            $request->validate([
-                'shares' => 'sometimes|nullable|numeric|min:0',
-                'savings' => 'sometimes|nullable|numeric|min:0',
-                'membership_date' => 'sometimes|nullable|date',
-                'status' => 'sometimes|nullable|in:Active,Inactive',
-            ]);
+        $request->validate([
+            'shares' => 'sometimes|nullable|numeric|min:0',
+            'savings' => 'sometimes|nullable|numeric|min:0',
+            'membership_date' => 'sometimes|nullable|date',
+            'status' => 'sometimes|nullable|in:Active,Inactive',
+        ]);
 
-            $member = User::findOrFail($id);
-            $previousStatus = $member->status; // Store previous status
+        $member = User::findOrFail($id);
+        $previousStatus = $member->status;
 
-            // ✅ Update only if fields are present in the request
-            if ($request->has('shares')) {
-                $member->shares = $request->input('shares');
+        if ($request->has('shares'))
+            $member->shares = $request->shares;
+        if ($request->has('savings'))
+            $member->savings = $request->savings;
+        if ($request->has('membership_date'))
+            $member->membership_date = $request->membership_date;
+
+        if ($request->has('status')) {
+            $newStatus = $request->status;
+
+            if ($newStatus === 'Inactive') {
+                $member->date_inactive = now();
+            } elseif ($newStatus === 'Active' && $previousStatus !== 'Active') {
+                $member->date_reactive = now();
             }
 
-            if ($request->has('savings')) {
-                $member->savings = $request->input('savings');
-            }
-
-            if ($request->has('membership_date')) {
-                $member->membership_date = $request->input('membership_date');
-            }
-
-            if ($request->has('status')) {
-                $newStatus = $request->input('status');
-
-                if ($newStatus === 'Inactive') {
-                    $member->date_inactive = now();
-                } elseif ($newStatus === 'Active' && $previousStatus !== 'Active') {
-                    $member->date_reactive = now();
-                }
-
-                $member->status = $newStatus;
-            }
-
-            $member->save();
-
-            return redirect()->route('admin.members')->with('success', 'Member updated successfully.');
-
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], 500);
+            $member->status = $newStatus;
         }
+
+        $member->save();
+
+        // ✅ If AJAX/fetch, return JSON
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'status' => $member->status,
+                'date_inactive' => $member->date_inactive ? \Carbon\Carbon::parse($member->date_inactive)->format('M d, Y') : null,
+                'date_reactive' => $member->date_reactive ? \Carbon\Carbon::parse($member->date_reactive)->format('M d, Y') : null,
+            ]);
+        }
+
+        // ✅ Normal form submit fallback
+        return redirect()->route('admin.members')->with('success', 'Member updated successfully.');
     }
-
-
 
 
 
