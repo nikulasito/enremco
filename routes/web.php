@@ -139,8 +139,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 Route::get('/download/withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'downloadTemplate']);
 Route::post('/admin/upload-withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'uploadWithdrawTemplate'])->name('withdraw.upload');
 
-Route::get('/admin/withdraw', [WithdrawController::class, 'controllerWithdraw'])->name('admin.withdraw');
-Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->name('admin.withdraw.partial');
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/admin/withdraw', [WithdrawController::class, 'controllerWithdraw'])->name('admin.withdraw');
+    Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->name('admin.withdraw.partial');
+});
 
 
 
