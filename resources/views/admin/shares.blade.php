@@ -1,729 +1,910 @@
-<x-admin-layout>
-    <div class="content-wrapper">
-        <div class="page-title"><h4>Shares Management</h4></div>
-        <div class="templates-container">
-            <div class="row mb-4">
-                <!-- Download Button on the Left -->
-                <div class="col-md-6 text-left">
-                    <a href="{{ url('/download/shares-template') }}" class="btn btn-success btn-block">Download Shares Template</a>
-                </div>
-                
-                <!-- Upload Form on the Right -->
-                <div class="col-md-6 text-right">
-                    <form action="{{ route('shares.upload') }}" method="POST" enctype="multipart/form-data" class="mb-3">
-                        @csrf
-                        <div class="row">
-                            <div class="col-md-8">
-                                <input type="file" name="file" class="form-control" required>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="submit" class="btn btn-success btn-block">Upload Shares Template</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+<x-admin-v2-layout title="ENREMCO - Shares Ledger" pageTitle="Shares Ledger Overview"
+    pageSubtitle="Manage share capital deposits" :showSearch="false">
+    {{-- Flash --}}
+    @if(session('success'))
+        <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-black text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div
+            class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-black text-red-700 whitespace-pre-line">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    {{-- Templates (Download/Upload) --}}
+    <div class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <a href="{{ url('/download/shares-template') }}"
+            class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-[#112119] hover:brightness-110">
+            <span class="material-symbols-outlined">download</span>
+            Download Shares Template
+        </a>
+
+        <form action="{{ route('shares.upload') }}" method="POST" enctype="multipart/form-data"
+            class="rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#1a2e24] p-4">
+            @csrf
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="file" name="file" required
+                    class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+                <button type="submit"
+                    class="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-black text-[#112119] hover:brightness-110">
+                    Upload Template
+                </button>
             </div>
-            
-            @if(session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
-            
-            @if(session('error'))
-                <div class="alert alert-danger" style="white-space: pre-line;">{{ session('error') }}</div>
-            @endif
-        </div>
-
-        
-
-<!-- Error Modal -->
-<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="errorModalLabel">Upload Error</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <pre class="text-danger">{{ session('error') }}</pre>
-      </div>
+        </form>
     </div>
-  </div>
-</div>
 
-    <!-- Filters and Actions -->
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <!-- Right-Aligned Inputs -->
-        <div class="col-lg-2">
-            <label for="officeFilter" class="form-label">Date of Remittance</label>
-            <input type="date" id="latestRemittanceDate" class="form-control me-2">
+    {{-- Bulk Add Monthly Shares --}}
+    <div class="mb-8 rounded-2xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#1a2e24] shadow-sm">
+        <div class="p-6 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+            <h4 class="text-lg font-black">Add Monthly Shares (Bulk)</h4>
+            <p class="text-sm text-[#638875] dark:text-[#a0b0a8]">
+                Select members below, fill details here, then click “Add Monthly Shares”.
+            </p>
         </div>
 
-        <!-- Remittance No. -->
-        <div class="col-lg-2">
-            <label for="remittanceNo" class="form-label">Remittance/Receipt No.</label>
-            <input type="text" id="remittanceNo" class="form-control me-2" placeholder="Enter Remittance No.">
-        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+                <label
+                    class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                    Date of Remittance
+                </label>
+                <input type="date" id="latestRemittanceDate"
+                    class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+            </div>
 
-        <div class="covered-period-filter col-lg-3">
-            <label for="officeFilter" class="form-label">Covered Period</label>
-            <div class="d-flex gap-2">
-                <!-- Month Dropdown -->
-                <select id="covered_month" name="covered_month" class="form-control me-2" required>
+            <div>
+                <label
+                    class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                    Remittance/Receipt No.
+                </label>
+                <input type="text" id="remittanceNo" placeholder="Enter Remittance No."
+                    class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+            </div>
+
+            <div>
+                <label
+                    class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                    Covered Month
+                </label>
+                <select id="covered_month"
+                    class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
                     <option value="">Month</option>
-                        @for ($m = 1; $m <= 12; $m++)
-                            <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
-                        @endfor
-                </select>
-
-                <!-- Year Dropdown -->
-                <select id="covered_year" name="covered_year" class="form-control" required>
-                    <option value="">Year</option>
-                        @for ($y = date('Y'); $y >= date('Y') - 50; $y--)
-                             <option value="{{ $y }}">{{ $y }}</option>
-                        @endfor
+                    @for ($m = 1; $m <= 12; $m++)
+                        <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
+                    @endfor
                 </select>
             </div>
-        </div>
 
-        <div class="col-lg-3">
-            <label for="sharesAmount" class="form-label">Monthly Shares Amount</label>
-            <div class="d-flex gap-2">
-                <input type="number" id="sharesAmount" class="form-control me-2" placeholder="Enter Amount" step="any" min="0">
-                <button id="addSharesBtn" class="btn btn-primary">Add Monthly Shares</button>
+            <div>
+                <label
+                    class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                    Covered Year
+                </label>
+                <select id="covered_year"
+                    class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+                    <option value="">Year</option>
+                    @for ($y = date('Y'); $y >= date('Y') - 50; $y--)
+                        <option value="{{ $y }}">{{ $y }}</option>
+                    @endfor
+                </select>
+            </div>
+
+            <div>
+                <label
+                    class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                    Monthly Shares Amount
+                </label>
+                <div class="flex gap-2">
+                    <input type="number" id="sharesAmount" placeholder="Enter Amount" step="any" min="0"
+                        class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+                    <button id="addSharesBtn"
+                        class="shrink-0 rounded-lg bg-primary px-4 py-2.5 text-sm font-black text-[#112119] hover:brightness-110">
+                        Add
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <form method="GET" action="{{ url()->current() }}" id="sharesFiltersForm" class="mb-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label for="officeFilter" class="form-label">Filter by Office</label>
-                <select id="officeFilter" name="office" class="form-select">
-                    <option value="">All Offices</option>
-                    @foreach($offices as $office)
-                        <option value="{{ $office }}" {{ request('office') === $office ? 'selected' : '' }}>
-                            {{ $office }}
-                        </option>
-                    @endforeach
-                </select>
+    {{-- Filters --}}
+    <form method="GET" action="{{ url()->current() }}" id="sharesFiltersForm" class="mb-6">
+        <div class="rounded-2xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#1a2e24] p-6 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label
+                        class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                        Office
+                    </label>
+                    <select id="officeFilter" name="office"
+                        class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+                        <option value="">All Offices</option>
+                        @foreach($offices as $office)
+                            <option value="{{ $office }}" {{ request('office') === $office ? 'selected' : '' }}>
+                                {{ $office }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label
+                        class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                        Search
+                    </label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#638875]">
+                            search
+                        </span>
+                        <input type="text" id="searchShares" name="search" value="{{ request('search') }}"
+                            placeholder="Search by Employee Name, ID, or Office..."
+                            class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 pl-10 pr-4 text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label
+                        class="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                        Show
+                    </label>
+                    <select name="per_page" id="per_page"
+                        class="w-full rounded-lg border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] py-2.5 px-4 text-sm">
+                        @foreach ([10, 20, 50, 100] as $option)
+                            <option value="{{ $option }}" {{ ($perPage ?? 10) == $option ? 'selected' : '' }}>
+                                {{ $option }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
-            <div class="col-md-5">
-                <label for="searchShares" class="form-label">Search Shares</label>
-                <input
-                    type="text"
-                    id="searchShares"
-                    name="search"
-                    class="form-control"
-                    placeholder="Search by Employee Name, ID, or Office..."
-                    value="{{ request('search') }}"
-                >
-            </div>
-
-            <div class="col-md-2">
-                <label for="per_page" class="form-label">Show</label>
-                <select name="per_page" id="per_page" class="form-select">
-                    @foreach ([10, 20, 50, 100] as $option)
-                        <option value="{{ $option }}" {{ ($perPage ?? 10) == $option ? 'selected' : '' }}>
-                            {{ $option }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-2">
-                <a href="{{ url()->current() }}?per_page={{ $perPage ?? 10 }}" class="btn btn-secondary w-100">
+            <div class="mt-4 flex justify-end">
+                <a href="{{ url()->current() }}?per_page={{ $perPage ?? 10 }}"
+                    class="rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119]
+                          px-4 py-2.5 text-sm font-black text-[#638875] dark:text-white/70 hover:bg-[#f6f8f7] dark:hover:bg-[#21352b]">
                     Clear
                 </a>
             </div>
         </div>
     </form>
 
+    {{-- Members Table --}}
+    <div
+        class="rounded-2xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#1a2e24] shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                    <tr>
+                        <th class="px-6 py-4">
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            No.</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Member ID</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Name</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Office</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Monthly Share</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Initial</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Latest</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Total Shares</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Months</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Last Updated</th>
+                        <th
+                            class="px-6 py-4 text-xs font-black uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">
+                            Action</th>
+                    </tr>
+                </thead>
 
-    <!-- Members Table -->
-    <table class="table table-striped shares-table">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="selectAll"></th>
-                <th>No.</th>
-                <th>Member ID</th>
-                <th>Name</th>
-                <th>Office</th>
-                <th>Monthly Share Contribution</th>
-                <th>Initial Remittance</th>
-                <th>Latest Remittance</th>
-                <th>Total Shares</th>
-                <th>No. of Months Contributed</th>
-                <th>Last Updated</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="membersTableBody">
-            @php $count = 1; @endphp
-            @foreach($members as $member)
-            @if($member->is_admin != 1) <!-- Skip if user is an admin -->
-                @php
-                    $totalShares = \App\Models\Share::where('employees_id', $member->id)->sum('amount');
-                    $monthsContributed = \App\Models\Share::where('employees_id', $member->id)
-                    ->whereNotNull('covered_month')
-                    ->count();
-                    $firstRemittance = \App\Models\Share::where('employees_id', $member->id)->orderBy('date_remittance', 'asc')->value('date_remittance');
-                    $latestRemittance = \App\Models\Share::where('employees_id', $member->id)->orderBy('date_remittance', 'desc')->value('date_remittance');
-                @endphp
-                <tr class="memberRow" data-name="{{ strtolower($member->name) }}" data-id="{{ strtolower($member->employee_ID) }}" data-office="{{ strtolower($member->office) }}" data-shares="{{ $member->shares }}">
-                    <td><input type="checkbox" class="memberCheckbox" value="{{ $member->id }}"></td>
-                    <td>{{ ($members->currentPage() - 1) * $members->perPage() + $loop->iteration }}</td>
-                    <td>{{ $member->employee_ID }}</td>
-                    <td>{{ $member->name }}</td>
-                    <td>{{ $member->office }}</td>
-                    <td class="current-shares">{{ $member->shares }}</td>
-                    <td>{{ $firstRemittance ?? 'N/A' }}</td>
-                    <td>{{ $latestRemittance ?? 'N/A' }}</td>
-                    <td>{{ $totalShares }}</td>
-                    <td>{{ $monthsContributed }}</td>
-                    @php
-                    $lastUpdated = \App\Models\Share::where('employees_id', $member->id)->max('date_updated');
-                    @endphp
-                    <td>{{ $lastUpdated ? \Carbon\Carbon::parse($lastUpdated)->format('Y-m-d') : 'N/A' }}</td>
+                <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32]">
+                    @foreach($members as $member)
+                        @if($member->is_admin != 1)
+                            @php
+                                $totalShares = \App\Models\Share::where('employees_id', $member->id)->sum('amount');
+                                $monthsContributed = \App\Models\Share::where('employees_id', $member->id)->whereNotNull('covered_month')->count();
+                                $firstRemittance = \App\Models\Share::where('employees_id', $member->id)->orderBy('date_remittance', 'asc')->value('date_remittance');
+                                $latestRemittance = \App\Models\Share::where('employees_id', $member->id)->orderBy('date_remittance', 'desc')->value('date_remittance');
+                                $lastUpdated = \App\Models\Share::where('employees_id', $member->id)->max('date_updated');
+                            @endphp
 
-                    <td>
-                        <button class="btn btn-info update-details-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#updateDetailsModal"
-                            data-id="{{ $member->id }}" {{-- Auto-generated ID --}}
-                            data-employee_id="{{ $member->employee_ID }}" {{-- Actual Employee Number (for display only) --}}
-                            data-name="{{ $member->name }}"
-                            data-office="{{ $member->office }}"
-                            data-contribution="{{ $member->shares }}"
-                            data-first-remittance="{{ $firstRemittance ?? 'N/A' }}"
-                            data-latest-remittance="{{ $latestRemittance ?? 'N/A' }}"
-                            data-total-shares="{{ $totalShares }}"
-                            data-months-contributed="{{ $monthsContributed }}">
-                            Update
-                        </button>
-                        <button class="btn btn-info view-details-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#viewDetailsModal"
-                            data-id="{{ $member->id }}" {{-- Auto-generated ID --}}
-                            data-employee_id="{{ $member->employee_ID }}" {{-- Actual Employee Number (for display only) --}}
-                            data-name="{{ $member->name }}"
-                            data-office="{{ $member->office }}"
-                            data-contribution="{{ $member->shares }}"
-                            data-first-remittance="{{ $firstRemittance ?? 'N/A' }}"
-                            data-latest-remittance="{{ $latestRemittance ?? 'N/A' }}"
-                            data-total-shares="{{ $totalShares }}"
-                            data-months-contributed="{{ $monthsContributed }}">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors memberRow"
+                                data-name="{{ strtolower($member->name) }}" data-id="{{ strtolower($member->employee_ID) }}"
+                                data-office="{{ strtolower($member->office) }}" data-shares="{{ $member->shares }}">
+                                <td class="px-6 py-4">
+                                    <input type="checkbox" class="memberCheckbox" value="{{ $member->id }}">
+                                </td>
+                                <td class="px-6 py-4 font-medium">
+                                    {{ ($members->currentPage() - 1) * $members->perPage() + $loop->iteration }}
+                                </td>
+                                <td class="px-6 py-4 font-black text-primary">{{ $member->employee_ID }}</td>
+                                <td class="px-6 py-4 font-black">{{ $member->name }}</td>
+                                <td class="px-6 py-4">{{ $member->office }}</td>
+                                <td class="px-6 py-4 current-shares">{{ $member->shares }}</td>
+                                <td class="px-6 py-4 text-[#638875] dark:text-[#a0b0a8]">{{ $firstRemittance ?? '—' }}</td>
+                                <td class="px-6 py-4 text-[#638875] dark:text-[#a0b0a8]">{{ $latestRemittance ?? '—' }}</td>
+                                <td class="px-6 py-4 font-black">{{ $totalShares }}</td>
+                                <td class="px-6 py-4">{{ $monthsContributed }}</td>
+                                <td class="px-6 py-4 text-[#638875] dark:text-[#a0b0a8]">
+                                    {{ $lastUpdated ? \Carbon\Carbon::parse($lastUpdated)->format('Y-m-d') : '—' }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-2 min-w-0">
+                                        <button type="button"
+                                            class="w-full inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-black text-[#112119] hover:brightness-110 transition"
+                                            data-open-modal="updateDetailsModal" data-id="{{ $member->id }}"
+                                            data-employee_id="{{ $member->employee_ID }}" data-name="{{ $member->name }}"
+                                            data-office="{{ $member->office }}" data-contribution="{{ $member->shares }}"
+                                            data-first-remittance="{{ $firstRemittance ?? 'N/A' }}"
+                                            data-latest-remittance="{{ $latestRemittance ?? 'N/A' }}"
+                                            data-total-shares="{{ $totalShares }}"
+                                            data-months-contributed="{{ $monthsContributed }}">
+                                            Update
+                                        </button>
+
+                                        <button type="button"
+                                            class="w-full inline-flex items-center justify-center rounded-lg bg-[#112119] px-3 py-2 text-xs font-black text-white hover:opacity-90 transition"
+                                            data-open-modal="viewDetailsModal" data-id="{{ $member->id }}"
+                                            data-employee_id="{{ $member->employee_ID }}" data-name="{{ $member->name }}"
+                                            data-office="{{ $member->office }}" data-contribution="{{ $member->shares }}"
+                                            data-first-remittance="{{ $firstRemittance ?? '—' }}"
+                                            data-latest-remittance="{{ $latestRemittance ?? '—' }}"
+                                            data-total-shares="{{ $totalShares }}"
+                                            data-months-contributed="{{ $monthsContributed }}">
+                                            View Contributions
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-6 border-t border-[#dce5e0] dark:border-[#2a3a32]">
+            {{ $members->appends(request()->except('page'))->links() }}
+        </div>
+    </div>
+
+    {{-- ===== Tailwind Modals ===== --}}
+
+    {{-- Update Contributions Modal (NEW DESIGN / Tailwind) --}}
+    <div id="updateDetailsModal" class="fixed inset-0 z-50 hidden">
+        {{-- Backdrop --}}
+        <div class="absolute inset-0 bg-[#0d1a14]/80 backdrop-blur-sm" data-close-modal="updateDetailsModal"></div>
+
+        <div class="relative min-h-screen w-full flex items-center justify-center p-4">
+            <div
+                class="bg-white dark:bg-[#112119] w-full max-w-3xl rounded-2xl shadow-2xl border border-[#dce5e0] dark:border-[#2a3a32] flex flex-col max-h-[90vh]">
+                {{-- Header --}}
+                <div
+                    class="px-8 py-6 border-b border-[#dce5e0] dark:border-[#2a3a32] flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-black text-[#111814] dark:text-white uppercase tracking-tight">Update
+                            Contributions</h2>
+                        <p class="text-sm text-[#638875] dark:text-[#a0b0a8]">Member Financial Management Profile</p>
+                    </div>
+
+                    <button type="button" class="text-[#638875] hover:text-red-500 transition-colors"
+                        data-close-modal="updateDetailsModal">
+                        <span class="material-symbols-outlined text-2xl">close</span>
+                    </button>
+                </div>
+
+                {{-- Body (scrollable) --}}
+                <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    {{-- Member Summary Card --}}
+                    <div
+                        class="bg-[#f6f8f7] dark:bg-[#1a2e24] rounded-xl p-6 border border-[#dce5e0] dark:border-[#2a3a32] mb-8">
+                        <div class="flex items-center gap-4 mb-6 border-b border-[#dce5e0] dark:border-[#2a3a32] pb-4">
+                            <div
+                                class="size-14 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined text-3xl">person</span>
+                            </div>
+                            <div>
+                                <p id="upd_memberIdLine"
+                                    class="text-[10px] font-bold text-primary uppercase tracking-widest">Member ID: —
+                                </p>
+                                <h3 id="upd_memberName" class="text-xl font-bold text-[#111814] dark:text-white">—</h3>
+                                <p id="upd_memberOffice" class="text-sm text-[#638875] dark:text-[#a0b0a8]">—</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Monthly Share</p>
+                                <p id="upd_monthlyShare" class="text-lg font-black text-[#111814] dark:text-white">—</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Initial Remittance</p>
+                                <p id="upd_firstRemittance" class="text-lg font-black text-[#111814] dark:text-white">—
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Latest Remittance</p>
+                                <p id="upd_latestRemittance" class="text-lg font-black text-primary">—</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">Total
+                                    Shares</p>
+                                <p id="upd_totalShares" class="text-lg font-black text-[#111814] dark:text-white">—</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Months Contributed</p>
+                                <p id="upd_monthsContributed" class="text-lg font-black text-[#111814] dark:text-white">
+                                    —</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Search --}}
+                    <div class="space-y-4">
+                        <h4 class="text-sm font-bold text-[#111814] dark:text-white uppercase tracking-wider">Search
+                            Remittance Records</h4>
+
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#638875]">calendar_month</span>
+                                <input id="searchRemittanceModal"
+                                    class="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#0d1a14] border border-[#dce5e0] dark:border-[#2a3a32] rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                                    placeholder="Enter Remittance No. or Year (YYYY)" type="text" />
+                            </div>
+
+                            <button id="searchRemittanceBtn" type="button"
+                                class="bg-primary hover:brightness-110 text-[#112119] font-bold px-6 py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-xl">search</span>
+                                Search Remittance No.
+                            </button>
+                        </div>
+
+                        <p class="text-[11px] text-[#638875] dark:text-[#a0b0a8]">Leave blank to view all historical
+                            records for this member.</p>
+                    </div>
+
+                    {{-- Results --}}
+                    <div id="remittanceResult" class="mt-6"></div>
+                </div>
+
+                {{-- Footer --}}
+                <div
+                    class="px-8 py-6 bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-t border-[#dce5e0] dark:border-[#2a3a32] flex items-center justify-end gap-3">
+                    <button type="button"
+                        class="px-6 py-2.5 rounded-lg text-sm font-bold text-[#638875] hover:bg-gray-200 dark:hover:bg-[#2a3a32] transition-all"
+                        data-close-modal="updateDetailsModal">
+                        Cancel
+                    </button>
+
+                    {{-- This button will save whatever is currently rendered in the remittance table --}}
+                    <button type="button" id="saveRemittanceChangesBtn"
+                        class="px-6 py-2.5 rounded-lg text-sm font-bold bg-[#112119] dark:bg-white text-white dark:text-[#112119] hover:opacity-90 transition-all hidden">
+                        Update Ledger
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- View Contributions Modal (MATCH UPDATE MODAL DESIGN) --}}
+    <div id="viewDetailsModal" class="fixed inset-0 z-50 hidden">
+        {{-- Backdrop --}}
+        <div class="absolute inset-0 bg-[#0d1a14]/80 backdrop-blur-sm" data-close-modal="viewDetailsModal"></div>
+
+        <div class="relative min-h-screen w-full flex items-center justify-center p-4">
+            <div
+                class="bg-white dark:bg-[#112119] w-full max-w-3xl rounded-2xl shadow-2xl border border-[#dce5e0] dark:border-[#2a3a32] flex flex-col max-h-[90vh]">
+
+                {{-- Header --}}
+                <div
+                    class="px-8 py-6 border-b border-[#dce5e0] dark:border-[#2a3a32] flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-black text-[#111814] dark:text-white uppercase tracking-tight">
                             View Contributions
-                        </button>
-                    </td>
-                </tr>
-                @endif
-            @endforeach
-        </tbody>
-    </table>
+                        </h2>
+                        <p class="text-sm text-[#638875] dark:text-[#a0b0a8]">
+                            Member Financial Management Profile
+                        </p>
+                    </div>
 
-    <div class="mt-4">
-        {{ $members->appends(request()->except('page'))->links() }}
-    </div>
-
-<!-- Modal for Updating Member Details -->
-<div class="modal fade" id="updateDetailsModal" tabindex="-1" aria-labelledby="updateDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header btn-primary text-white">
-                <h5 class="modal-title" id="viewDetailsModalLabel">Update Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <table class="table table-bordered">
-                    <tbody>
-                        <tr><th>Member ID</th><td id="modalUpdateEmployeeID"></td></tr>
-                        <tr><th>Name</th><td id="modalUpdateName"></td></tr>
-                        <tr><th>Office</th><td id="modalUpdateOffice"></td></tr>
-                        <tr><th>Monthly Share Contribution</th><td id="modalUpdateContribution"></td></tr>
-                        <tr><th>Initial Remittance</th><td id="modalUpdateFirstRemittance"></td></tr>
-                        <tr><th>Latest Remittance</th><td id="modalUpdateLatestRemittance"></td></tr>
-                        <tr><th>Total Shares</th><td id="modalUpdateTotalShares"></td></tr>
-                        <tr><th>No. of Months Contributed</th><td id="modalUpdateMonthsContributed"></td></tr>
-                    </tbody>
-                </table>
-
-                <!-- Remittance Input Field -->
-                <div class="mt-3">
-                    <label for="remittanceFilter" class="form-label">Enter Remittance No. or Year (YYYY)</label>
-                    <input type="text" id="searchRemittanceModal" class="form-control" placeholder="Enter Remittance No. or Year (YYYY)">
-                    <button class="btn btn-primary mt-2" id="searchRemittanceBtn">Search Remittance No.</button>
+                    <button type="button" class="text-[#638875] hover:text-red-500 transition-colors"
+                        data-close-modal="viewDetailsModal">
+                        <span class="material-symbols-outlined text-2xl">close</span>
+                    </button>
                 </div>
 
-                <!-- Contributions Table -->
-                <div id="remittanceResult" class="mt-3"></div>
+                {{-- Body (scrollable) --}}
+                <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    {{-- Member Summary Card (same as update) --}}
+                    <div
+                        class="bg-[#f6f8f7] dark:bg-[#1a2e24] rounded-xl p-6 border border-[#dce5e0] dark:border-[#2a3a32] mb-8">
+                        <div class="flex items-center gap-4 mb-6 border-b border-[#dce5e0] dark:border-[#2a3a32] pb-4">
+                            <div
+                                class="size-14 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined text-3xl">person</span>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-bold text-primary uppercase tracking-widest">
+                                    Member ID: <span id="modalEmployeeID">—</span>
+                                </p>
+                                <h3 id="modalName" class="text-xl font-bold text-[#111814] dark:text-white">—</h3>
+                                <p id="modalOffice" class="text-sm text-[#638875] dark:text-[#a0b0a8]">—</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Monthly Share
+                                </p>
+                                <p id="modalContribution" class="text-lg font-black text-[#111814] dark:text-white">—
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Initial Remittance
+                                </p>
+                                <p id="modalFirstRemittance" class="text-lg font-black text-[#111814] dark:text-white">—
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Latest Remittance
+                                </p>
+                                <p id="modalLatestRemittance" class="text-lg font-black text-primary">—</p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Total Shares
+                                </p>
+                                <p id="modalTotalShares" class="text-lg font-black text-[#111814] dark:text-white">—</p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-bold text-[#638875] dark:text-[#a0b0a8] uppercase mb-1">
+                                    Months Contributed
+                                </p>
+                                <p id="modalMonthsContributed"
+                                    class="text-lg font-black text-[#111814] dark:text-white">—</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Filter section (same “Search Remittance Records” layout style) --}}
+                    <div class="space-y-4">
+                        <h4 class="text-sm font-bold text-[#111814] dark:text-white uppercase tracking-wider">
+                            Filter Contribution Records
+                        </h4>
+
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#638875]">
+                                    calendar_today
+                                </span>
+                                <input id="yearFilter" type="number" min="1900" max="2100"
+                                    placeholder="Enter Year (YYYY)"
+                                    class="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#0d1a14] border border-[#dce5e0] dark:border-[#2a3a32] rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" />
+                            </div>
+
+                            <button id="viewYearContributions" type="button"
+                                class="bg-primary hover:brightness-110 text-[#112119] font-bold px-6 py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-xl">visibility</span>
+                                View Contributions
+                            </button>
+                        </div>
+
+                        <p class="text-[11px] text-[#638875] dark:text-[#a0b0a8]">
+                            Tip: Leave blank to view all historical records for this member.
+                        </p>
+                    </div>
+
+                    {{-- Results (table gets injected here) --}}
+                    <div id="contributionsResult" class="mt-6"></div>
+                </div>
+
+                {{-- Footer (match update) --}}
+                <div
+                    class="px-8 py-6 bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-t border-[#dce5e0] dark:border-[#2a3a32] flex items-center justify-end gap-3">
+                    <button type="button"
+                        class="px-6 py-2.5 rounded-lg text-sm font-bold text-[#638875] hover:bg-gray-200 dark:hover:bg-[#2a3a32] transition-all"
+                        data-close-modal="viewDetailsModal">
+                        Close
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
-</div>
 
 
-<!-- Modal for Viewing Member Details -->
-<div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-labelledby="viewDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header btn-primary text-white">
-                <h5 class="modal-title" id="viewDetailsModalLabel">Member Contribution Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <table class="table table-bordered">
-                    <tbody>
-                        <tr><th>Member ID</th><td id="modalEmployeeID"></td></tr>
-                        <tr><th>Name</th><td id="modalName"></td></tr>
-                        <tr><th>Office</th><td id="modalOffice"></td></tr>
-                        <tr><th>Monthly Share Contribution</th><td id="modalContribution"></td></tr>
-                        <tr><th>Initial Remittance</th><td id="modalFirstRemittance"></td></tr>
-                        <tr><th>Latest Remittance</th><td id="modalLatestRemittance"></td></tr>
-                        <tr><th>Total Shares</th><td id="modalTotalShares"></td></tr>
-                        <tr><th>No. of Months Contributed</th><td id="modalMonthsContributed"></td></tr>
-                    </tbody>
-                </table>
 
-                <!-- Year Input Field -->
-                <div class="mt-3">
-                    <label for="yearFilter" class="form-label">Enter Year</label>
-                    <input type="number" id="yearFilter" class="form-control" min="2000" max="{{ date('Y') }}" placeholder="Enter year">
-                    <button class="btn btn-primary mt-2" id="viewYearContributions">View Contributions</button>
-                </div>
-
-                <!-- Contributions Table -->
-                <div id="contributionsResult" class="mt-3"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-    <!-- Modal for No Checkbox Selected -->
-    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Please select at least one member before adding shares.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    {{-- Select members error modal (renamed: your page had TWO #errorModal) --}}
+    <div id="selectMembersErrorModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" data-close-modal="selectMembersErrorModal"></div>
+        <div
+            class="relative mx-auto mt-40 w-[92%] max-w-md overflow-hidden rounded-xl bg-white dark:bg-[#1a2e24] shadow-2xl">
+            <div class="p-6">
+                <h4 class="text-lg font-black mb-2">Error</h4>
+                <p class="text-sm text-[#638875] dark:text-[#a0b0a8]">Please select at least one member before adding
+                    shares.</p>
+                <div class="mt-5 flex justify-end">
+                    <button type="button"
+                        class="rounded-lg bg-primary px-5 py-2.5 text-sm font-black text-[#112119] hover:brightness-110"
+                        data-close-modal="selectMembersErrorModal">
+                        OK
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-<div id="duplicateMessageBox"></div>
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // ===== Helpers =====
+                const openModal = (id) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden');
+                };
 
-    const filtersForm = document.getElementById('sharesFiltersForm');
-    const searchInput = document.getElementById('searchShares');
-    const officeSelect = document.getElementById('officeFilter');
-    const perPageSelect = document.getElementById('per_page');
+                const closeModal = (id) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                };
 
-    let t = null;
+                // ===== Modal Elements =====
+                const updateModal = document.getElementById('updateDetailsModal');
+                const remittanceResult = document.getElementById('remittanceResult');
+                const searchInput = document.getElementById('searchRemittanceModal');
+                const searchBtn = document.getElementById('searchRemittanceBtn');
+                const saveBtn = document.getElementById('saveRemittanceChangesBtn');
 
-    searchInput.addEventListener('input', () => {
-        clearTimeout(t);
-        t = setTimeout(() => filtersForm.submit(), 300);
-    });
+                const viewModal = document.getElementById('viewDetailsModal');
+                const yearFilter = document.getElementById('yearFilter');
+                const viewYearBtn = document.getElementById('viewYearContributions');
+                const contributionsResult = document.getElementById('contributionsResult');
 
-    officeSelect.addEventListener('change', () => filtersForm.submit());
-    perPageSelect.addEventListener('change', () => filtersForm.submit());
+                let currentUpdateUserId = null;
+                let currentViewUserId = null;
 
+                // ===== Global Close (backdrop / close buttons) =====
+                document.addEventListener('click', (e) => {
+                    const closeTarget = e.target.closest('[data-close-modal]');
+                    if (!closeTarget) return;
+                    const id = closeTarget.getAttribute('data-close-modal');
+                    closeModal(id);
 
+                    // reset specific modal contents
+                    if (id === 'updateDetailsModal') {
+                        if (remittanceResult) remittanceResult.innerHTML = '';
+                        if (searchInput) searchInput.value = '';
+                        if (saveBtn) saveBtn.classList.add('hidden');
+                        currentUpdateUserId = null;
+                    }
 
-    const selectAllCheckbox = document.getElementById('selectAll');
-    const memberCheckboxes = document.querySelectorAll('.memberCheckbox');
-    const addSharesBtn = document.getElementById('addSharesBtn');
-    const sharesAmount = document.getElementById('sharesAmount');
-    const officeFilter = document.getElementById('officeFilter');
-    const latestRemittanceDate = document.getElementById('latestRemittanceDate');
-
-    function toggleAddSharesButton() {
-        const selected = document.querySelectorAll('.memberCheckbox:checked').length > 0;
-        addSharesBtn.disabled = !selected;
-
-        // Disable filtering when checkboxes are selected
-        sharesAmount.disabled = selected;
-        officeFilter.disabled = selected;
-    }
-
-    // Select All Checkbox Logic
-    selectAllCheckbox.addEventListener('change', function () {
-        memberCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
-        toggleAddSharesButton();
-    });
-
-    // Individual Checkbox Logic
-    memberCheckboxes.forEach(cb => {
-        cb.addEventListener('change', toggleAddSharesButton);
-    });
-
-
-    // Shares Filtering - Apply only to selected office
-    sharesAmount.addEventListener('input', function () {
-        const filterValue = parseInt(sharesAmount.value, 10);
-        const selectedOffice = officeFilter.value;
-
-        document.querySelectorAll('.memberRow').forEach(row => {
-            const shares = parseInt(row.getAttribute('data-shares'), 10);
-            const office = row.getAttribute('data-office');
-
-            // Apply filtering only to members within the selected office
-            if (selectedOffice === '' || office === selectedOffice) {
-                row.style.display = isNaN(filterValue) || shares === filterValue ? '' : 'none';
-            }
-        });
-    });
-
-    // Handle Adding Shares
-addSharesBtn.addEventListener('click', function () {
-    let selectedIds = Array.from(document.querySelectorAll('.memberCheckbox:checked'))
-        .map(cb => cb.value);
-
-    let amount = sharesAmount.value;
-    let remittanceDate = latestRemittanceDate.value;
-    let coveredMonth = document.getElementById('covered_month').value;
-    let remittanceNo = document.getElementById('remittanceNo').value;
-    let coveredYear = document.getElementById('covered_year').value;
-
-    if (selectedIds.length === 0) {
-        let errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-        errorModal.show();
-        return;
-    }
-
-    if (!amount || isNaN(amount) || amount <= 0) {
-        alert('Enter a valid shares amount.');
-        return;
-    }
-
-    if (!remittanceDate) {
-        alert('Please select a remittance date.');
-        return;
-    }
-
-    if (!coveredMonth || !coveredYear) {
-        alert('Please select a covered period (Month and Year).');
-        return;
-    }
-
-    fetch("{{ route('admin.bulk-add-shares') }}", {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-            member_ids: selectedIds, 
-            amount: amount, 
-            date_remittance: remittanceDate,
-            remittance_no: remittanceNo,
-            covered_month: coveredMonth,
-            covered_year: coveredYear
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.duplicates && data.duplicates.length > 0) {
-            // Show only the duplicates — do not reload
-            let duplicatesMessage = "The following remittances already exist:\n";
-            data.duplicates.forEach(duplicate => {
-                duplicatesMessage += `Remittance No: ${duplicate.remittance_no}, Covered Period: ${duplicate.covered_month}/${duplicate.covered_year}\n`;
-            });
-            alert(duplicatesMessage);
-        } else if (data.success) {
-            // No duplicates, proceed normally
-            alert('Shares added successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-        console.error('Error:', error);
-    });
-});
-
-
-document.querySelectorAll(".update-details-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        // ✅ DISPLAY: Proper employee_ID in the modal
-        document.getElementById("modalUpdateEmployeeID").textContent = this.dataset.employee_id;
-        // ✅ STORE the users.id in a hidden field for later fetch
-        document.getElementById("searchRemittanceBtn").setAttribute("data-user-update-id", this.dataset.id);
-        document.getElementById("modalUpdateName").textContent = this.dataset.name;
-        document.getElementById("modalUpdateOffice").textContent = this.dataset.office;
-        document.getElementById("modalUpdateContribution").textContent = this.dataset.contribution;
-        document.getElementById("modalUpdateFirstRemittance").textContent = this.dataset.firstRemittance;
-        document.getElementById("modalUpdateLatestRemittance").textContent = this.dataset.latestRemittance;
-        document.getElementById("modalUpdateTotalShares").textContent = this.dataset.totalShares;
-        document.getElementById("modalUpdateMonthsContributed").textContent = this.dataset.monthsContributed;
-
-        document.getElementById("searchRemittanceModal").value = "";
-        document.getElementById("remittanceResult").innerHTML = "";
-    });
-});
-
-document.querySelectorAll(".view-details-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        // ✅ DISPLAY: Proper employee_ID in the modal
-        document.getElementById("modalEmployeeID").textContent = this.dataset.employee_id;
-        // ✅ STORE the users.id in a hidden field for later fetch
-        document.getElementById("viewYearContributions").setAttribute("data-user-id", this.dataset.id);
-        document.getElementById("modalName").textContent = this.dataset.name;
-        document.getElementById("modalOffice").textContent = this.dataset.office;
-        document.getElementById("modalContribution").textContent = this.dataset.contribution;
-        document.getElementById("modalFirstRemittance").textContent = this.dataset.firstRemittance;
-        document.getElementById("modalLatestRemittance").textContent = this.dataset.latestRemittance;
-        document.getElementById("modalTotalShares").textContent = this.dataset.totalShares;
-        document.getElementById("modalMonthsContributed").textContent = this.dataset.monthsContributed;
-
-        document.getElementById("yearFilter").value = "";
-        document.getElementById("contributionsResult").innerHTML = "";
-    });
-});
-
-document.getElementById("viewYearContributions").addEventListener("click", function () {
-    let year = document.getElementById("yearFilter").value.trim();
-    let userId = this.getAttribute("data-user-id");
-    
-    // Fix: Get the correct Employee ID from the modal field
-    let employeeID = document.getElementById("modalEmployeeID").textContent.trim(); 
-
-    console.log("Fetching contributions for Member ID:", employeeID, "Year:", year);
-
-    if (!year) {
-        alert("⚠️ Please enter a year.");
-        return;
-    }
-
-    let requestUrl = `/admin/get-contributions/${encodeURIComponent(userId)}/${encodeURIComponent(year)}`;
-    console.log("📡 Request URL:", requestUrl);
-
-    fetch(requestUrl)
-        .then(response => response.json())
-        .then(data => {
-            console.log("✅ Fetched Contributions Data:", data);
-
-            let tableContent = `<table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Date Remittance</th>
-                                            <th>Remittance No.</th>
-                                            <th>Month</th>
-                                            <th>Year</th>
-                                            <th>Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-
-            if (data.success && data.contributions.length > 0) {
-                data.contributions.forEach(contribution => {
-                    tableContent += `<tr>
-                        <td>${contribution.date_remittance || 'N/A'}</td>
-                        <td>${contribution.remittance_no || 'N/A'}</td>
-                        <td>${contribution.month_name || 'N/A'}</td>
-                        <td>${contribution.covered_year || 'N/A'}</td>
-                        <td>${contribution.amount || 'N/A'}</td>
-                    </tr>`;
+                    if (id === 'viewDetailsModal') {
+                        if (contributionsResult) contributionsResult.innerHTML = '';
+                        if (yearFilter) yearFilter.value = '';
+                        currentViewUserId = null;
+                    }
                 });
-            } else {
-                console.warn("⚠️ No contributions found.");
-                tableContent += `<tr><td colspan="5" class="text-center">${data.message || 'No contributions found'}</td></tr>`;
-            }
 
-            tableContent += `</tbody></table>
-                             <button id="printContributions" class="btn btn-primary mt-3">Print Contribution</button>`;
-            document.getElementById("contributionsResult").innerHTML = tableContent;
-
-            // Add print functionality
-            document.getElementById("printContributions").addEventListener("click", function () {
-                // Remove the print button before printing
-                let printContent = document.getElementById("contributionsResult").innerHTML;
-                printContent = printContent.replace('<button id="printContributions" class="btn btn-primary mt-3">Print Contribution</button>', '');
-
-                // Open a new window for printing
-                const newWindow = window.open('', '', 'width=800, height=600');
-                newWindow.document.write('<html><head><title>Print Contributions</title>');
-                
-                // Add custom styles for printing
-                newWindow.document.write('<style>@media print { body { font-family: Arial, sans-serif; font-size: 12px; } table { width: 100%; border-collapse: collapse; } th, td { padding: 8px; text-align: left; border: 1px solid #ddd; } }</style>');
-                
-                // Write the content inside the new window
-                newWindow.document.write('</head><body>');
-                newWindow.document.write(`<h2>Contribution for the year ${year}</h2>`);
-                newWindow.document.write(printContent);
-                newWindow.document.write('<p>This is a system generated data.</p>');
-                newWindow.document.write('</body></html>');
-                newWindow.document.close();
-                
-                // Trigger the print dialog
-                newWindow.print();
-            });
-        })
-        .catch(error => {
-            console.error("❌ Error fetching contributions:", error);
-            document.getElementById("contributionsResult").innerHTML = `<p class="text-danger">⚠️ Failed to load contributions.</p>`;
-        });
-});
-
-
-document.getElementById("searchRemittanceBtn").addEventListener("click", function () {
-    let searchQuery = document.getElementById("searchRemittanceModal").value.trim();
-    let userId = this.getAttribute("data-user-update-id");
-    
-    // Fix: Get the correct Employee ID from the modal field
-    let updateemployeeID = document.getElementById("modalUpdateEmployeeID").textContent.trim(); 
-
-    console.log("🔍 Searching Contributions...");
-    console.log("User ID:", userId);
-    console.log("Search Query:", searchQuery);
-
-    if (!searchQuery) {
-        alert("⚠️ Please enter a search query (Year or Remittance No.)");
-        return;
-    }
-
-    let requestUrl = `/admin/get-contributions/${encodeURIComponent(userId)}/${encodeURIComponent(searchQuery)}`;
-    console.log("📡 Request URL:", requestUrl);
-
-    fetch(requestUrl)
-        .then(response => response.json())
-        .then(data => {
-            console.log("✅ Fetched Contributions Data:", data);
-
-            let tableContent = `<table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Date Remittance</th>
-                                            <th>Remittance No.</th>
-                                            <th>Month</th>
-                                            <th>Year</th>
-                                            <th>Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-
-            if (data.success && data.contributions.length > 0) {
-                data.contributions.forEach((contribution, index) => {
-                    tableContent += `<tr data-share-id="${contribution.shares_id}">
-                        <td><input type="date" class="form-control" name="date_remittance_${index}" value="${contribution.date_remittance || ''}"></td>
-                        <td><input type="text" class="form-control" name="remittance_no_${index}" value="${contribution.remittance_no || ''}"></td>
-                        <td><input type="text" class="form-control" name="month_name_${index}" value="${contribution.month_name || ''}"></td>
-                        <td><input type="text" class="form-control" name="covered_year_${index}" value="${contribution.covered_year || ''}"></td>
-                        <td><input type="number" class="form-control" name="amount_${index}" value="${contribution.amount || ''}" step="any" min="0"></td>
-                    </tr>`;
+                document.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Escape') return;
+                    if (updateModal && !updateModal.classList.contains('hidden')) closeModal('updateDetailsModal');
+                    if (viewModal && !viewModal.classList.contains('hidden')) closeModal('viewDetailsModal');
                 });
-            } else {
-                console.warn("⚠️ No contributions found.");
-                tableContent += `<tr><td colspan="5" class="text-center">${data.message || 'No contributions found'}</td></tr>`;
-            }
 
-            tableContent += `</tbody></table>
-                            <div class="text-end mt-3">
-                                <button class="btn btn-success" id="saveRemittanceChangesBtn">Save Changes</button>
-                            </div>`;
-            document.getElementById("remittanceResult").innerHTML = tableContent;
-        })
+                // ===== Open + Populate Modals =====
+                document.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-open-modal]');
+                    if (!btn) return;
 
-        .catch(error => {
-            console.error("❌ Error fetching contributions:", error);
-            document.getElementById("remittanceResult").innerHTML = `<p class="text-danger">⚠️ Failed to load contributions.</p>`;
-        });
-});
+                    const modalId = btn.getAttribute('data-open-modal');
 
+                    // --- UPDATE MODAL ---
+                    if (modalId === 'updateDetailsModal') {
+                        currentUpdateUserId = btn.dataset.id;
+                        if (searchBtn) searchBtn.setAttribute('data-user-update-id', currentUpdateUserId);
 
-document.addEventListener("click", function (e) {
-    if (e.target && e.target.id === "saveRemittanceChangesBtn") {
-        let rows = document.querySelectorAll("#remittanceResult table tbody tr");
-        let updates = [];
+                        // Fill header card
+                        document.getElementById('upd_memberIdLine').textContent = `Member ID: ${btn.getAttribute('data-employee_id') || '—'}`;
+                        document.getElementById('upd_memberName').textContent = btn.dataset.name || '—';
+                        document.getElementById('upd_memberOffice').textContent = btn.dataset.office || '—';
+                        document.getElementById('upd_monthlyShare').textContent = btn.dataset.contribution ? `₱ ${btn.dataset.contribution}` : '—';
+                        document.getElementById('upd_firstRemittance').textContent = btn.dataset.firstRemittance || '—';
+                        document.getElementById('upd_latestRemittance').textContent = btn.dataset.latestRemittance || '—';
+                        document.getElementById('upd_totalShares').textContent = btn.dataset.totalShares ? `₱ ${btn.dataset.totalShares}` : '—';
+                        document.getElementById('upd_monthsContributed').textContent = btn.dataset.monthsContributed ? `${btn.dataset.monthsContributed} Months` : '—';
 
-        rows.forEach((row, index) => {
-            let shares_id = row.getAttribute("data-share-id");
-            let date_remittance = row.querySelector(`input[name="date_remittance_${index}"]`).value;
-            let remittance_no = row.querySelector(`input[name="remittance_no_${index}"]`).value;
-            let month_name = row.querySelector(`input[name="month_name_${index}"]`).value;
-            let covered_year = row.querySelector(`input[name="covered_year_${index}"]`).value;
-            let amount = row.querySelector(`input[name="amount_${index}"]`).value;
+                        if (remittanceResult) remittanceResult.innerHTML = '';
+                        if (searchInput) searchInput.value = '';
+                        if (saveBtn) saveBtn.classList.add('hidden');
 
-            if (!date_remittance || !remittance_no || !month_name || !covered_year || isNaN(amount)) {
-                alert(`⚠️ Please fill all fields correctly for row ${index + 1}`);
-                return;
-            }
+                        openModal('updateDetailsModal');
+                        return;
+                    }
 
-            updates.push({
-                shares_id: shares_id,
-                date_remittance: date_remittance,
-                remittance_no: remittance_no,
-                month_name: month_name,
-                covered_year: covered_year,
-                amount: amount,
-            });
-        });
+                    // --- VIEW MODAL ---
+                    if (modalId === 'viewDetailsModal') {
+                        currentViewUserId = btn.dataset.id;
 
-        if (updates.length === 0) {
-            alert("⚠️ Nothing to save.");
-            return;
-        }
+                        document.getElementById('modalEmployeeID').textContent = btn.getAttribute('data-employee_id') || '—';
+                        document.getElementById('modalName').textContent = btn.dataset.name || '—';
+                        document.getElementById('modalOffice').textContent = btn.dataset.office || '—';
+                        document.getElementById('modalContribution').textContent = btn.dataset.contribution ? `₱ ${btn.dataset.contribution}` : '—';
+                        document.getElementById('modalFirstRemittance').textContent = btn.dataset.firstRemittance || '—';
+                        document.getElementById('modalLatestRemittance').textContent = btn.dataset.latestRemittance || '—';
+                        document.getElementById('modalTotalShares').textContent = btn.dataset.totalShares ? `₱ ${btn.dataset.totalShares}` : '—';
+                        document.getElementById('modalMonthsContributed').textContent = btn.dataset.monthsContributed ? `${btn.dataset.monthsContributed} Months` : '—';
 
-        fetch("/admin/update-remittances", {
-            method: "POST",
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ updates: updates })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(data); // This will log the full response object to the console for debugging
-            if (data.success) {
-                alert('Shares added successfully!');
-                location.reload();
-            } else if (data.duplicates && data.duplicates.length > 0) {
-                // Handle showing the duplicates message
-                let duplicatesMessage = "The following remittances already exist:\n";
-                data.duplicates.forEach(duplicate => {
-                    duplicatesMessage += `Remittance No: ${duplicate.remittance_no}, Covered Period: ${duplicate.covered_month}/${duplicate.covered_year}\n`;
+                        if (contributionsResult) contributionsResult.innerHTML = '';
+                        if (yearFilter) yearFilter.value = '';
+
+                        openModal('viewDetailsModal');
+                        return;
+                    }
+
+                    // fallback (if you add more modals later)
+                    openModal(modalId);
                 });
-                alert(duplicatesMessage);
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            alert('Error: ' + error.message);
-            console.error('Error:', error);
-        });
-    }
-});
 
-@if(session('error'))
+                // ===== UPDATE MODAL: Search =====
+                const runUpdateSearch = () => {
+                    const userId = searchBtn?.getAttribute('data-user-update-id');
+                    if (!userId) return alert('No member selected.');
 
-        document.addEventListener('DOMContentLoaded', function () {
-            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-            errorModal.show();
-        });
+                    const query = (searchInput?.value || '').trim();
+                    const requestUrl = `/admin/get-contributions/${encodeURIComponent(userId)}/${encodeURIComponent(query || 'all')}`;
 
-@endif
+                    remittanceResult.innerHTML = `
+                                                                    <div class="mt-4 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                        Loading records...
+                                                                    </div>
+                                                                `;
+
+                    fetch(requestUrl)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (!data.success || !Array.isArray(data.contributions) || data.contributions.length === 0) {
+                                remittanceResult.innerHTML = `
+                                                                                <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                                    ${data.message || 'No contributions found.'}
+                                                                                </div>
+                                                                            `;
+                                saveBtn.classList.add('hidden');
+                                return;
+                            }
+
+                            let html = `
+                                                                            <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                <table class="w-full text-left">
+                                                                                    <thead>
+                                                                                        <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                                                        `;
+
+                            data.contributions.forEach((c, i) => {
+                                html += `
+                                                                                <tr data-share-id="${c.shares_id}">
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="date" name="date_remittance_${i}" value="${c.date_remittance || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="remittance_no_${i}" value="${c.remittance_no || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="month_name_${i}" value="${c.month_name || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="covered_year_${i}" value="${c.covered_year || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="number" step="any" min="0" name="amount_${i}" value="${c.amount || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                </tr>
+                                                                            `;
+                            });
+
+                            html += `</tbody></table></div>`;
+                            remittanceResult.innerHTML = html;
+                            saveBtn.classList.remove('hidden');
+                            remittanceResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            remittanceResult.innerHTML = `
+                                                                            <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">
+                                                                                Failed to load contributions.
+                                                                            </div>
+                                                                        `;
+                            saveBtn.classList.add('hidden');
+                        });
+                };
+
+                searchBtn?.addEventListener('click', runUpdateSearch);
+                searchInput?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') runUpdateSearch();
+                });
+
+                // ===== UPDATE MODAL: Save =====
+                saveBtn?.addEventListener('click', () => {
+                    const rows = remittanceResult.querySelectorAll('table tbody tr');
+                    if (!rows.length) return alert('Nothing to save.');
+
+                    const updates = [];
+                    rows.forEach((row, index) => {
+                        updates.push({
+                            shares_id: row.getAttribute('data-share-id'),
+                            date_remittance: row.querySelector(`input[name="date_remittance_${index}"]`)?.value || null,
+                            remittance_no: row.querySelector(`input[name="remittance_no_${index}"]`)?.value || null,
+                            month_name: row.querySelector(`input[name="month_name_${index}"]`)?.value || null,
+                            covered_year: row.querySelector(`input[name="covered_year_${index}"]`)?.value || null,
+                            amount: row.querySelector(`input[name="amount_${index}"]`)?.value || null,
+                        });
+                    });
+
+                    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    if (!csrf) return alert("Missing CSRF token meta tag in your layout <head>.");
+
+                    fetch("/admin/update-remittances", {
+                        method: "POST",
+                        headers: { "X-CSRF-TOKEN": csrf, "Content-Type": "application/json" },
+                        body: JSON.stringify({ updates })
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("✅ Remittances updated successfully!");
+                                location.reload();
+                                return;
+                            }
+
+                            if (data.duplicates?.length) {
+                                let msg = "The following remittances already exist:\n";
+                                data.duplicates.forEach(d => {
+                                    msg += `Remittance No: ${d.remittance_no}, Covered Period: ${d.covered_month}/${d.covered_year}\n`;
+                                });
+                                alert(msg);
+                                return;
+                            }
+
+                            alert("❌ Error: " + (data.error || "Unknown error"));
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            alert("❌ An error occurred while saving.");
+                        });
+                });
+
+                // ===== VIEW MODAL: View Contributions By Year (or All) =====
+                const renderViewTable = (list) => {
+                    if (!Array.isArray(list) || list.length === 0) {
+                        contributionsResult.innerHTML = `
+                                                                <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                    No contributions found.
+                                                                </div>
+                                                                `;
+                        return;
+                    }
+
+                    let html = `
+                                                                        <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                        <table class="w-full text-left">
+                                                                            <thead>
+                                                                            <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                                            </tr>
+                                                                            </thead>
+                                                                            <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                                                    `;
+
+                    list.forEach((c) => {
+                        html += `
+                                                                        <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                                                            <td class="px-6 py-4 text-sm text-[#111814] dark:text-white">${c.date_remittance || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.remittance_no || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.month_name || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.covered_year || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm font-black text-[#111814] dark:text-white">${c.amount ?? '—'}</td>
+                                                                        </tr>
+                                                                        `;
+                    });
+
+                    html += `</tbody></table></div>`;
+                    contributionsResult.innerHTML = html;
+                };
 
 
-// Sample using jQuery AJAX
+                const runViewYear = () => {
+                    if (!currentViewUserId) return alert('No member selected.');
 
+                    const year = (yearFilter?.value || '').trim();
+                    const requestUrl = `/admin/get-contributions/${encodeURIComponent(currentViewUserId)}/${encodeURIComponent(year || 'all')}`;
 
+                    contributionsResult.innerHTML = `
+                                                                    <div class="p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">Loading...</div>
+                                                                `;
 
+                    fetch(requestUrl)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (!data.success) {
+                                contributionsResult.innerHTML = `
+                                                                                <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
+                                                                                    ${data.message || 'Failed to load.'}
+                                                                                </div>
+                                                                            `;
+                                return;
+                            }
+                            renderViewTable(data.contributions || []);
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            contributionsResult.innerHTML = `
+                                                                            <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
+                                                                                Failed to load contributions.
+                                                                            </div>
+                                                                        `;
+                        });
+                };
 
+                viewYearBtn?.addEventListener('click', runViewYear);
+                yearFilter?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') runViewYear();
+                });
+            });
+        </script>
+    @endpush
 
-});
-</script>
-</x-admin-layout>
+</x-admin-v2-layout>

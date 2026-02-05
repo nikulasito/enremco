@@ -18,8 +18,7 @@ class LoanDetail extends Model
     protected $fillable = [
         'loan_id', 'employee_ID', 'loan_type', 'loan_amount', 'interest_rate',
         'date_applied', 'date_approved', 'total_net', 'terms', 'monthly_payment',
-        'no_of_payments','total_payments', 'outstanding_balance',
-        'last_payment', 'remarks', 'total_deduction', 'old_balance',
+        'first_payment', 'last_payment', 'remarks', 'total_deduction', 'old_balance',
         'lpp', 'handling_fee', 'petty_cash_loan', 'co_maker_name', 'co_maker_position',
         'co_maker2_name', 'co_maker2_position', 'interest'
     ];
@@ -54,26 +53,5 @@ class LoanDetail extends Model
     public function latestPayment()
     {
         return $this->hasOne(LoanPayment::class, 'loan_id', 'loan_id')->latestOfMany();
-    }
-
-        protected static function booted()
-    {
-        static::creating(function ($loan) {
-            if (empty($loan->loan_id)) {
-                $loan->loan_id = self::generateLoanId();
-            }
-        });
-    }
-
-    public static function generateLoanId(): string
-    {
-        $date = Carbon::now('Asia/Manila')->format('Ymd');
-
-        do {
-            $rand = random_int(1000, 9999);
-            $loanId = "LN-{$date}-{$rand}";
-        } while (self::where('loan_id', $loanId)->exists());
-
-        return $loanId;
     }
 }

@@ -1,6 +1,30 @@
 <x-admin-layout>
 <div class="content-wrapper">
         <div class="page-title"><h4>Loan Details</h4></div>
+        <div class="templates-container">
+            <div class="row mb-4">
+                <!-- Download Button on the Left -->
+                <div class="col-md-6 text-left">
+                    <a href="{{ url('/download/loans-template') }}" class="btn btn-success btn-block">Download Loans Template</a>
+                </div>
+                
+                <!-- Upload Form on the Right -->
+                <div class="col-md-6 text-right">
+                    <form action="{{ route('admin.upload-loans-template') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="file" name="file" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success btn-block">Upload Loans Template</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
         @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
         @endif
@@ -151,104 +175,96 @@
 
                 <table class="table">
                     <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Loan ID</th>
-                        <th>Employee ID</th>
-                        <th>Employee Name</th>
-                        <th>Office</th>
-                        <th>Loan Type</th>
-                        <th>Loan Amount</th>
-                        <th>Date Approved</th>
-                        <th>Total Deduction</th>
-                        <th>Total Net</th>
-                        <th>Terms</th>
-                        <th>Monthly Payment</th>
-                        <th>No. of Total Payments</th>
-                        <th>Total Payments</th>
-                        <th>Outstanding Balance</th>
-                        <th>Latest Payment</th>
-                        <th>Remarks</th>
-                        <th>Action</th>
-                    </tr>
+                        <tr>
+                            <th>No.</th>
+                            <th>Loan ID</th>
+                            <th>Employee ID</th>
+                            <th>Employee Name</th>
+                            <th>Office</th>
+                            <!-- <th>Employment Status</th> -->
+                            <th>Loan Type</th>
+                            <th>Loan Amount</th>
+                            <th>Date Approved</th>
+                            <!-- <th>Total Deduction</th>
+                            <th>Total Net</th>
+                            <th>Terms</th>
+                            <th>Monthly Payment</th>
+                            <th>No. of Total Payments</th>
+                            <th>Total Payments</th>
+                            <th>Outstanding Balance</th>
+                            <th>Latest Payment</th>
+                            <th>Remarks</th> -->
+                            <th>Action</th>
+                        </tr>
                     </thead>
                     <tbody id="loanTableBody">
-                        @foreach ($loans as $loan)
-                        <tr>
-                            <td>{{ $loop->iteration }}</td>
+                    @foreach ($loans as $loan)
+                    <tr>
+                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $loan->loan_id }}</td>
+                        <td>{{ $loan->employee_ID }}</td>  <!-- ✅ Shows Account No. (employee_ID) -->
+                        <td>{{ optional($loan->user)->name ?? 'NA' }}</td>
+                        <td>{{ optional($loan->user)->office ?? 'NA' }}</td>
+                        <!-- <td>{{ optional($loan->user)->status ?? 'NA'}}</td> -->
+                        <td>{{ $loan->loan_type }}</td>
+                        <td>{{ $loan->loan_amount }}</td>
+                        <td>{{ $loan->date_approved }}</td>
+                        <!-- <td>{{ $loan->total_deduction }}</td>
+                        <td>{{ $loan->total_net }}</td>
+                        <td>{{ $loan->terms }}</td>
+                        <td>{{ $loan->monthly_payment }}</td>
+                        <td>{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}</td>
+                        <td>{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}</td>
+                        <td>{{ optional($loan->latestPayment)->outstanding_balance ?? '0.00' }}</td>
+                        <td>{{ optional($loan->latestPayment)->latest_remittance ?? 'No Remittance Yet' }}</td>
+                        <td>{{ $loan->remarks ?? 'N/A' }}</td> -->
+                        <td>
+                            <!-- View Details Button -->
+                            <button class="btn btn-info view-loan-btn"
+                                data-loan-id="{{ $loan->loan_id }}"
+                                data-employee-id="{{ $loan->employee_ID }}"
+                                data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
+                                data-office="{{ optional($loan->user)->office ?? 'NA' }}"
+                                data-loan-type="{{ $loan->loan_type }}"
+                                data-loan-amount="{{ $loan->loan_amount }}"
+                                data-terms="{{ $loan->terms }}"
+                                data-interest-rate="{{ $loan->interest_rate }}"
+                                data-monthly-payment="{{ $loan->monthly_payment }}"
+                                data-total-deduction="{{ $loan->total_deduction }}"
+                                data-total-net="{{ $loan->total_net }}"
+                                data-date-approved="{{ $loan->date_approved }}"
+                                data-remarks="{{ $loan->remarks }}"
+                                data-no-of-payments="{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}"
+                                data-total-payments="{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}"
+                                data-latest-payment="{{ optional($loan->latestPayment)->latest_remittance ?? '' }}">
+                                View Details
+                            </button>
+                            <br>
+                            <!-- Update Button -->
+                            <button class="btn btn-warning update-loan-btn"
+                                data-loan-id="{{ $loan->loan_id }}"
+                                data-employee-id="{{ $loan->employee_ID }}"
+                                data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
+                                data-office="{{ optional($loan->user)->office ?? 'NA' }}"
+                                data-loan-type="{{ $loan->loan_type }}"
+                                data-loan-amount="{{ $loan->loan_amount }}"
+                                data-terms="{{ $loan->terms }}"
+                                data-interest-rate="{{ $loan->interest_rate }}"
+                                data-monthly-payment="{{ $loan->monthly_payment }}"
+                                data-total-deduction="{{ $loan->total_deduction }}"
+                                data-total-net="{{ $loan->total_net }}"
+                                data-date-approved="{{ $loan->date_approved }}"
+                                data-remarks="{{ $loan->remarks }}"
+                                data-no-of-payments="{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}"
+                                data-total-payments="{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}"
+                                data-latest-payment="{{ optional($loan->latestPayment)->latest_remittance ?? '' }}">
+                                Update
+                            </button>
+                        </td>
 
-                            <td class="cell-loan-id">{{ $loan->loan_id }}</td>
-                            <td class="cell-employee-id">{{ $loan->employee_ID }}</td>
-                            <td class="cell-employee-name">{{ optional($loan->user)->name ?? 'NA' }}</td>
-                            <td class="cell-office">{{ optional($loan->user)->office ?? 'NA' }}</td>
-
-                            <td class="cell-loan-type">{{ $loan->loan_type }}</td>
-                            <td class="cell-loan-amount">{{ $loan->loan_amount }}</td>
-                            <td class="cell-date-approved">{{ $loan->date_approved }}</td>
-
-                            <td class="cell-total-deduction">{{ $loan->total_deduction }}</td>
-                            <td class="cell-total-net">{{ $loan->total_net }}</td>
-                            <td class="cell-terms">{{ $loan->terms }}</td>
-                            <td class="cell-monthly-payment">{{ $loan->monthly_payment }}</td>
-
-                            <td class="cell-total-payments-count">{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}</td>
-                            <td class="cell-total-payments">{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}</td>
-                            <td class="cell-outstanding-balance">{{ optional($loan->latestPayment)->outstanding_balance ?? '0.00' }}</td>
-                            <td class="cell-latest-payment">{{ optional($loan->latestPayment)->latest_remittance ?? 'No Remittance Yet' }}</td>
-
-                            <td class="cell-remarks">{{ $loan->remarks ?? 'N/A' }}</td>
-
-                            <td>
-                                <button class="btn btn-info view-loan-btn"
-                                    data-loan-id="{{ $loan->loan_id }}"
-                                    data-employee-id="{{ $loan->employee_ID }}"
-                                    data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
-                                    data-office="{{ optional($loan->user)->office ?? 'NA' }}"
-                                    data-loan-type="{{ $loan->loan_type }}"
-                                    data-loan-amount="{{ $loan->loan_amount }}"
-                                    data-terms="{{ $loan->terms }}"
-                                    data-interest-rate="{{ $loan->interest_rate }}"
-                                    data-monthly-payment="{{ $loan->monthly_payment }}"
-                                    data-total-deduction="{{ $loan->total_deduction }}"
-                                    data-total-net="{{ $loan->total_net }}"
-                                    data-date-approved="{{ $loan->date_approved }}"
-                                    data-remarks="{{ $loan->remarks }}"
-                                    data-no-of-payments="{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}"
-                                    data-total-payments="{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}"
-                                    data-outstanding-balance="{{ optional($loan->latestPayment)->outstanding_balance ?? '0.00' }}"
-                                    data-latest-payment="{{ optional($loan->latestPayment)->latest_remittance ?? '' }}"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#viewLoanModal"
-                                >
-                                    View Details
-                                </button>
-
-                                <button class="btn btn-warning update-loan-btn mt-1"
-                                    data-loan-id="{{ $loan->loan_id }}"
-                                    data-employee-id="{{ $loan->employee_ID }}"
-                                    data-employee-name="{{ optional($loan->user)->name ?? 'NA' }}"
-                                    data-office="{{ optional($loan->user)->office ?? 'NA' }}"
-                                    data-loan-type="{{ $loan->loan_type }}"
-                                    data-loan-amount="{{ $loan->loan_amount }}"
-                                    data-terms="{{ $loan->terms }}"
-                                    data-interest-rate="{{ $loan->interest_rate }}"
-                                    data-monthly-payment="{{ $loan->monthly_payment }}"
-                                    data-total-deduction="{{ $loan->total_deduction }}"
-                                    data-total-net="{{ $loan->total_net }}"
-                                    data-date-approved="{{ $loan->date_approved }}"
-                                    data-remarks="{{ $loan->remarks }}"
-                                    data-no-of-payments="{{ optional($loan->latestPayment)->total_payments_count ?? 0 }}"
-                                    data-total-payments="{{ optional($loan->latestPayment)->total_payments ?? '0.00' }}"
-                                    data-outstanding-balance="{{ optional($loan->latestPayment)->outstanding_balance ?? '0.00' }}"
-                                    data-latest-payment="{{ optional($loan->latestPayment)->latest_remittance ?? '' }}"
-                                >
-                                    Update
-                                </button>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-
+                    </tr>
+                    @endforeach
+                </tbody>
 
                 </table>
     </div>
@@ -293,34 +309,8 @@
 
                     <div class="mb-3">
                         <label>Monthly Payment</label>
-                        <input type="text" name="monthly_payment" id="update_monthly_payment" class="form-control">
+                        <input type="text" name="update_monthly_payment" id="update_monthly_payment" class="form-control">
                     </div>
-
-                    <div class="mb-3">
-                        <label>Terms</label>
-                        <input type="number" name="terms" id="update_terms" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label>Interest Rate</label>
-                        <input type="number" step="0.01" name="interest_rate" id="update_interest_rate" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label>Total Deduction</label>
-                        <input type="text" name="total_deduction" id="update_total_deduction" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label>Total Net</label>
-                        <input type="text" name="total_net" id="update_total_net" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label>Date Approved</label>
-                        <input type="date" name="date_approved" id="update_date_approved" class="form-control">
-                    </div>
-
 
                     <!-- Editable Fields -->
                     <div class="mb-3">
@@ -333,8 +323,9 @@
                     </div>
                     <div class="mb-3">
                         <label>Latest Payment</label>
-                        <input type="date" name="latest_remittance" id="update_latest_payment" class="form-control">
+                        <input type="date" name="latest_payment" id="update_latest_payment" class="form-control">
                     </div>
+
                     <div class="mb-3">
                         <label>Remarks</label>
                         <select name="remarks" id="update_remarks" class="form-control">
@@ -544,102 +535,88 @@ inputs.forEach(id => {
 });
 
 document.querySelectorAll(".update-loan-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        let updateLoanModalEl = document.getElementById("updateLoanModal");
-        let updateLoanModal = new bootstrap.Modal(updateLoanModalEl);
+        button.addEventListener("click", function () {
+            let updateLoanModal = new bootstrap.Modal(document.getElementById("updateLoanModal"));
 
-        const setValue = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.value = val ?? "";
-        };
+            if (!updateLoanModal) {
+                console.error("⚠️ Modal not found!");
+                return;
+            }
 
-        setValue("update_loan_id", this.dataset.loanId);
-        setValue("update_employee_id", this.dataset.employeeId);
-        setValue("update_employee_name", this.dataset.employeeName);
-
-        setValue("update_loan_amount", this.dataset.loanAmount);
-        setValue("update_terms", this.dataset.terms);
-        setValue("update_interest_rate", this.dataset.interestRate);
-        setValue("update_monthly_payment", this.dataset.monthlyPayment);
-
-        setValue("update_total_deduction", this.dataset.totalDeduction);
-        setValue("update_total_net", this.dataset.totalNet);
-        setValue("update_date_approved", this.dataset.dateApproved);
-
-        // Optional (from latest payment)
-        setValue("update_no_of_payments", this.dataset.noOfPayments);
-        setValue("update_total_payments", this.dataset.totalPayments);
-        setValue("update_latest_payment", this.dataset.latestPayment);
-
-        // Dropdowns
-        const loanTypeDropdown = document.getElementById("update_loan_type");
-        if (loanTypeDropdown) loanTypeDropdown.value = this.dataset.loanType ?? "Regular Loan";
-
-        const remarksDropdown = document.getElementById("update_remarks");
-        if (remarksDropdown) remarksDropdown.value = this.dataset.remarks ?? "New Loan";
-
-        updateLoanModal.show();
+            // ✅ Retrieve data attributes safely
+            let loanId = this.dataset.loanId;
+            let employeeId = this.dataset.employeeId;
+            let employeeName = this.dataset.employeeName;
+            let loanType = this.dataset.loanType;
+            let loanAmount = this.dataset.loanAmount || "0.00"; 
+            let noOfPayments = this.dataset.noOfPayments || 0;
+            let totalPayments = this.dataset.totalPayments || "0.00";
+            let monthlyPayment = this.dataset.monthlyPayment || "0.00"; 
+            let latestPayment = this.dataset.latestPayment || "";
+            let remarks = this.dataset.remarks || "";
+            
+            // ✅ Helper function to safely set values
+            function setValue(id, value) {
+                let element = document.getElementById(id);
+                if (element) {
+                    element.value = value;
+                } else {
+                    console.warn(`⚠️ Element with ID '${id}' not found.`);
+                }
+            }
+            
+            // ✅ Set values in modal
+            setValue("update_loan_id", loanId);
+            setValue("update_employee_id", employeeId);
+            setValue("update_employee_name", employeeName);
+            setValue("update_loan_amount", loanAmount);
+            setValue("update_no_of_payments", noOfPayments);
+            setValue("update_total_payments", totalPayments);
+            setValue("update_latest_payment", latestPayment);
+            setValue("update_monthly_payment", monthlyPayment);
+            setValue("update_remarks", remarks);
+            
+            // ✅ Set loan type dropdown
+            let loanTypeDropdown = document.getElementById("update_loan_type");
+            if (loanTypeDropdown) {
+                loanTypeDropdown.value = loanType;
+            }
+            // ✅ Show the modal
+            updateLoanModal.show();
+        });
     });
-});
-
 
 
 document.getElementById("updateLoanForm").addEventListener("submit", function (event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const loanId = document.getElementById("update_loan_id").value;
-    const formData = new FormData(this);
-    formData.append('_method', 'PATCH');
+  const loanId = document.getElementById("update_loan_id").value;
+  const formData = new FormData(this);
 
-    const url = URLS.loanUpdate.replace('__LOANID__', encodeURIComponent(loanId));
+  // IMPORTANT: method spoofing
+  formData.append("_method", "PATCH");
 
-    fetch(url, {
-    method: "POST",
+  fetch(`${URLS.loanUpdate}/${encodeURIComponent(loanId)}`, {
+    method: "POST", // <-- use POST
     body: formData,
     headers: {
-        "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value,
-        "Accept": "application/json"
+      "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+      "Accept": "application/json"
     }
-    })
-    .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            // Show validation errors clearly
-            if (response.status === 422 && data.errors) {
-                let msg = "❌ Validation errors:\n";
-                Object.keys(data.errors).forEach(k => {
-                    msg += `- ${k}: ${data.errors[k].join(", ")}\n`;
-                });
-                alert(msg);
-            } else {
-                alert("❌ Update failed: " + (data.message || "Server error"));
-            }
-            throw new Error(data.message || "Request failed");
-        }
-
-        return data;
-    })
-    .then((data) => {
-        if (!data.success) {
-            alert("❌ Update failed: " + (data.message || "Unknown error"));
-            return;
-        }
-
-        // ✅ close modal
-        const modalEl = document.getElementById("updateLoanModal");
-        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.hide();
-
-        alert("✅ Loan updated!");
-
-        // ✅ optional: reload or update table cells
-        location.reload();
-    })
-    .catch((error) => {
-        console.error("🚨 Error updating loan:", error);
-    });
+  })
+  .then(async res => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Update failed");
+    return data;
+  })
+  .then(data => {
+    if (!data.success) throw new Error(data.message || "Update failed");
+    alert("✅ Loan updated!");
+    location.reload();
+  })
+  .catch(err => console.error("🚨 Error updating loan:", err));
 });
+
 
 
 

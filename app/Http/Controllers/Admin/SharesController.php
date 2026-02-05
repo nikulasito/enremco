@@ -36,8 +36,8 @@ class SharesController extends Controller
     public function controllerShares(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
-        $search  = trim((string) $request->input('search', ''));
-        $office  = (string) $request->input('office', '');
+        $search = trim((string) $request->input('search', ''));
+        $office = (string) $request->input('office', '');
 
         $query = User::query()
             ->where('is_admin', '!=', 1)
@@ -46,8 +46,8 @@ class SharesController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                ->orWhere('employee_ID', 'like', "%{$search}%")
-                ->orWhere('office', 'like', "%{$search}%");
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
             });
         }
 
@@ -78,7 +78,7 @@ class SharesController extends Controller
                 'date_remittance' => 'required|date',
                 'remittance_no' => 'required|string|max:255',
                 'covered_month' => 'required|integer|min:1|max:12',
-                 'covered_year' => 'required|integer|min:1900|max:' . date('Y'),
+                'covered_year' => 'required|integer|min:1900|max:' . date('Y'),
             ]);
 
             $duplicates = [];
@@ -160,16 +160,16 @@ class SharesController extends Controller
                     'amount' => $share->amount,
                 ];
 
-                $newMonth = (int)date('m', strtotime($data['month_name']));
-                $newAmount = (float)$data['amount'];
-                $newYear = (int)$data['covered_year'];
+                $newMonth = (int) date('m', strtotime($data['month_name']));
+                $newAmount = (float) $data['amount'];
+                $newYear = (int) $data['covered_year'];
 
                 if (
                     $share->date_remittance != $data['date_remittance'] ||
                     $share->remittance_no != $data['remittance_no'] ||
-                    (int)$share->covered_month != $newMonth ||
-                    (int)$share->covered_year != $newYear ||
-                    (float)$share->amount != $newAmount
+                    (int) $share->covered_month != $newMonth ||
+                    (int) $share->covered_year != $newYear ||
+                    (float) $share->amount != $newAmount
                 ) {
                     $share->date_remittance = $data['date_remittance'];
                     $share->remittance_no = $data['remittance_no'];
@@ -217,6 +217,76 @@ class SharesController extends Controller
         } catch (\Exception $e) {
             return back()->with('import_error', $e->getMessage());
         }
+    }
+
+    public function partial(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $search = trim((string) $request->input('search', ''));
+        $office = trim((string) $request->input('office', ''));
+
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
+
+        if ($office !== '') {
+            $q->where('office', $office);
+        }
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+        $members->withPath(route('admin.shares')); // keep paginator links pointing to main page
+
+        $userIds = $members->pluck('id');
+
+        $shareTotals = Share::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $monthsContributedByUser = Share::whereIn('employees_id', $userIds)
+            ->whereNotNull('covered_month')
+            ->select('employees_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('employees_id')
+            ->pluck('cnt', 'employees_id');
+
+        $firstRemittanceByUser = Share::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MIN(date_remittance) as first'))
+            ->groupBy('employees_id')
+            ->pluck('first', 'employees_id');
+
+        $latestRemittanceByUser = Share::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_remittance) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        $latestUpdatedByUser = Share::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_updated) as updated'))
+            ->groupBy('employees_id')
+            ->pluck('updated', 'employees_id');
+
+        $tbody = view('admin.shares._rows', compact(
+            'members',
+            'shareTotals',
+            'monthsContributedByUser',
+            'firstRemittanceByUser',
+            'latestRemittanceByUser',
+            'latestUpdatedByUser'
+        ))->render();
+
+        $pagination = view('admin.shares._pagination', compact('members'))->render();
+
+        return response()->json([
+            'tbody' => $tbody,
+            'pagination' => $pagination,
+        ]);
     }
 
 
