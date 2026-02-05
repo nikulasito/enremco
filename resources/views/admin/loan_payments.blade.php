@@ -2,6 +2,36 @@
 <div class="content-wrapper">
         <div class="page-title"><h4>Loan Payments</h4></div>
 
+    <div class="templates-container">
+        <div class="row mb-4">
+            <div class="col-md-6 text-left">
+                <a href="{{ url('/download/loan-payments-template') }}" class="btn btn-success btn-block">
+                    Download Loan Payments Template
+                </a>
+            </div>
+            <div class="col-md-6 text-right">
+            <form action="{{ route('loan-payments.upload') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                @csrf
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success btn-block">Upload Template</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger" style="white-space: pre-line;">{{ session('error') }}</div>
+@endif
+    </div>
+
                 <!-- Filter by Office -->
             <div class="d-flex align-items-center mb-3 gap-3">
                 <div class="col-lg-2">
@@ -254,7 +284,11 @@
 <script>
    document.addEventListener("DOMContentLoaded", function() {
 
-        const selectAllCheckbox = document.getElementById("selectAll");
+    const STORE_BULK_URL = "{{ route('admin.loan-payments.store-bulk') }}";
+    const UPDATE_URL     = "{{ route('admin.loan-payments.update') }}";
+    const REMITTANCE_URL = "{{ url('admin/loan-payments/remittance') }}";
+
+    const selectAllCheckbox = document.getElementById("selectAll");
     const bulkAddPaymentBtn = document.querySelector(".bulkAddPayment");
     const checkboxes = document.querySelectorAll("#loanPaymentTable input[type='checkbox']");
     
@@ -323,7 +357,7 @@ bulkAddPaymentBtn.addEventListener("click", function () {
             return;
         }
 
-        fetch(`/admin/loan-payments/store-bulk`, {
+        fetch(STORE_BULK_URL, {
             method: "POST",
             body: JSON.stringify({
                 loans: selectedLoans,
@@ -436,7 +470,7 @@ let modal = new bootstrap.Modal(document.getElementById("updatePaymentModal"));
         const loanId = document.getElementById("modal_loan_id").value;
         const formData = new FormData(this);
 
-        fetch(`/admin/loan-payments/update/${loanId}`, {
+        fetch(UPDATE_URL, {
             method: "POST",
             body: formData,
             headers: {
@@ -456,41 +490,6 @@ let modal = new bootstrap.Modal(document.getElementById("updatePaymentModal"));
         })
         .catch(() => alert("Something went wrong."));
     });
-
-document.getElementById("saveLoanPaymentBtn").addEventListener("click", function () {
-    const remittanceNo = document.getElementById("modal_remittance_no").value;
-    const totalPayments = parseFloat(document.getElementById("modal_total_payments").value);
-    const outstandingBalance = parseFloat(document.getElementById("modal_outstanding_balance").value);
-    const latestRemittance = document.getElementById("modal_latest_remittance").value;
-
-    fetch(`/admin/loan-payments/update`, {
-        method: "POST",
-        headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            remittance_no: remittanceNo,
-            total_payments: totalPayments,
-            outstanding_balance: outstandingBalance,
-            latest_remittance: latestRemittance
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert("✅ " + data.message);
-            document.getElementById("modalSearchSection").style.display = "none";
-            document.getElementById("remittanceSearchForm").reset();
-        } else {
-            alert("⚠ " + data.message);
-        }
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        alert("❌ An error occurred while updating loan payment.");
-    });
-});
 
 
 });

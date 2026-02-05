@@ -3,26 +3,26 @@
     <div class="page-title"><h4>Withdrawals Management</h4></div>
 
     <div class="templates-container">
-  <div class="row mb-4">
-    <div class="col-md-6 text-left">
-      <a href="{{ url('/download/withdraw-template') }}" class="btn btn-success btn-block">
-        Download Withdrawals Template
-      </a>
-    </div>
-    <div class="col-md-6 text-right">
-      <form action="{{ route('withdraw.upload') }}" method="POST" enctype="multipart/form-data" class="mb-3">
-        @csrf
-        <div class="row">
-          <div class="col-md-8">
-            <input type="file" name="file" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <button type="submit" class="btn btn-success btn-block">Upload Template</button>
-          </div>
+        <div class="row mb-4">
+            <div class="col-md-6 text-left">
+                <a href="{{ url('/download/withdraw-template') }}" class="btn btn-success btn-block">
+                    Download Withdrawals Template
+                </a>
+            </div>
+            <div class="col-md-6 text-right">
+            <form action="{{ route('withdraw.upload') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                @csrf
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success btn-block">Upload Template</button>
+                    </div>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
 
   @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>

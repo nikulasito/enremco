@@ -117,6 +117,13 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 Route::get('/download/withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'downloadTemplate']);
 Route::post('/admin/upload-withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'uploadWithdrawTemplate'])->name('withdraw.upload');
 
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/download/loan-payments-template', [LoanPaymentController::class, 'downloadTemplate']);
+    Route::post('/admin/upload-loan-payments-template', [LoanPaymentController::class, 'uploadTemplate'])
+        ->name('loan-payments.upload');
+});
+
+
 Route::get('/admin/withdraw', [WithdrawController::class, 'controllerWithdraw'])->name('admin.withdraw');
 Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->name('admin.withdraw.partial');
 
@@ -126,15 +133,16 @@ Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->n
 
 
 Route::get('/admin/download-members', [MemberController::class, 'downloadMembers'])->name('admin.download-members');
-Route::patch('/admin/loans/update/{id}', [LoansController::class, 'updateLoan'])->name('admin.update-loan');
 Route::get('/admin/loans', [LoansController::class, 'controllerLoans'])->name('admin.loans');
 Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::get('/admin/loans', [LoansController::class, 'index'])->name('admin.loans');
     Route::post('/admin/loans/store', [LoansController::class, 'store'])->name('admin.store-loan');
     Route::get('/admin/get-user-details/{employee_id}', [LoansController::class, 'getUserDetails']);
+
+    Route::patch('/admin/loans/{loanId}', [LoansController::class, 'updateLoan'])
+        ->name('admin.loans.update');
 });
 Route::get('/admin/get-co-maker/{name}', [LoansController::class, 'getCoMakerDetails']);
-Route::patch('/admin/loans/update', [LoansController::class, 'updateLoan'])->name('admin.update-loan');
 Route::get('/admin/loan-payments', [LoanPaymentController::class, 'loanPayments'])->name('admin.loan-payments');
 Route::post('/admin/loan-payments/store', [LoanPaymentController::class, 'storeLoanPayment'])->name('admin.store-loan-payment');
 Route::post('/admin/loan-payments/store-bulk', [LoanPaymentController::class, 'storeBulkLoanPayments']);
@@ -148,7 +156,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 });
 
-
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::post('/admin/loan-payments/store-bulk', [LoanPaymentController::class, 'storeBulkLoanPayments'])
+        ->name('admin.loan-payments.store-bulk');
+});
 
 
 
@@ -193,7 +204,6 @@ Route::post('/admin/upload-savings-template', [SavingsController::class, 'upload
 // Route::get('/admin/withdrawals', [AdminController::class, 'viewWithdrawals'])->name('admin.withdrawals');
 
 // Route::get('/admin/savings', [AdminController::class, 'savings']);
-// Route::get('/admin/loans', [AdminController::class, 'loans']);
 
 
 Route::get('/admin/new-members', [AdminController::class, 'newMembers'])->name('admin.new-members');
