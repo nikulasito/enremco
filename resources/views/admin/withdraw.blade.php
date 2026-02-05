@@ -489,69 +489,69 @@
                         .then(r => r.json())
                         .then(data => {
                             let html = `
-                                        <div class="overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
-                                            <table class="w-full text-left">
-                                                <thead>
-                                                    <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Reference No.</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
-                                    `;
+                                            <div class="overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                <table class="w-full text-left">
+                                                    <thead>
+                                                        <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Reference No.</th>
+                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                        `;
 
                             if (data.success && data.withdrawals.length > 0) {
                                 data.withdrawals.forEach((w, i) => {
                                     html += `
-                                                <tr data-withdrawals-id="${w.withdrawals_id}">
-                                                    <td class="px-6 py-3">
-                                                        <input type="date" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                            name="date_of_withdrawal_${i}" value="${w.date_of_withdrawal || ''}">
-                                                    </td>
-                                                    <td class="px-6 py-3">
-                                                        <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                            name="reference_no_${i}" value="${w.reference_no || ''}">
-                                                    </td>
-                                                    <td class="px-6 py-3">
-                                                        <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                            name="month_name_${i}" value="${w.month_name || ''}">
-                                                    </td>
-                                                    <td class="px-6 py-3">
-                                                        <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                            name="covered_year_${i}" value="${w.covered_year || ''}">
-                                                    </td>
-                                                    <td class="px-6 py-3">
-                                                        <input type="number" step="any" min="0" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                            name="amount_withdrawn_${i}" value="${w.amount_withdrawn || ''}">
-                                                    </td>
-                                                </tr>
-                                            `;
+                                                    <tr data-withdrawals-id="${w.withdrawals_id}">
+                                                        <td class="px-6 py-3">
+                                                            <input type="date" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                name="date_of_withdrawal_${i}" value="${w.date_of_withdrawal || ''}">
+                                                        </td>
+                                                        <td class="px-6 py-3">
+                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                name="reference_no_${i}" value="${w.reference_no || ''}">
+                                                        </td>
+                                                        <td class="px-6 py-3">
+                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                name="month_name_${i}" value="${w.month_name || ''}">
+                                                        </td>
+                                                        <td class="px-6 py-3">
+                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                name="covered_year_${i}" value="${w.covered_year || ''}">
+                                                        </td>
+                                                        <td class="px-6 py-3">
+                                                            <input type="number" step="any" min="0" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                name="amount_withdrawn_${i}" value="${w.amount_withdrawn || ''}">
+                                                        </td>
+                                                    </tr>
+                                                `;
                                 });
                             } else {
                                 html += `
-                                            <tr>
-                                                <td colspan="5" class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                                    No withdrawals found
-                                                </td>
-                                            </tr>
-                                        `;
+                                                <tr>
+                                                    <td colspan="5" class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                        No withdrawals found
+                                                    </td>
+                                                </tr>
+                                            `;
                             }
 
                             html += `
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    </tbody>
+                                                </table>
+                                            </div>
 
-                                        <div class="mt-4 flex justify-end">
-                                            <button class="rounded-lg bg-[#112119] dark:bg-white text-white dark:text-[#112119] px-5 py-2.5 text-sm font-black hover:opacity-90"
-                                                id="saveWithdrawChangesBtn">
-                                                Save Changes
-                                            </button>
-                                        </div>
-                                    `;
+                                            <div class="mt-4 flex justify-end">
+                                                <button class="rounded-lg bg-[#112119] dark:bg-white text-white dark:text-[#112119] px-5 py-2.5 text-sm font-black hover:opacity-90"
+                                                    id="saveWithdrawChangesBtn">
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        `;
 
                             result.innerHTML = html;
                         })
