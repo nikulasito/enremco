@@ -20,18 +20,9 @@ class SavingsController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->input('perPage', 10); // default is 10
-        $members = User::where('is_admin', '!=', 1)->paginate($perPage); // adjust your query as needed
-
-        $offices = User::distinct()->pluck('office');
-        return view('savings', compact('members', 'offices'));
-    }
-
-    public function controllerSavings(Request $request)
-    {
         $perPage = (int) $request->input('per_page', 10);
-        $search  = trim((string) $request->input('search', ''));
-        $office  = trim((string) $request->input('office', ''));
+        $search = trim((string) $request->input('search', ''));
+        $office = trim((string) $request->input('office', ''));
 
         $q = User::query()
             ->where('status', 'Active')
@@ -44,12 +35,14 @@ class SavingsController extends Controller
         if ($search !== '') {
             $q->where(function ($qq) use ($search) {
                 $qq->where('name', 'like', "%{$search}%")
-                ->orWhere('employee_ID', 'like', "%{$search}%")
-                ->orWhere('office', 'like', "%{$search}%");
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
             });
         }
 
+        // ✅ YOU MISSED THIS
         $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+        $members->withPath(route('admin.savings'));
 
         $offices = User::where('status', 'Active')->pluck('office')->unique()->values();
 
@@ -99,28 +92,106 @@ class SavingsController extends Controller
         ));
     }
 
-    public function partial(Request $request)
+
+
+    public function controllerSavings(Request $request)
     {
-        // Reuse the same logic as controllerSavings, but return partial HTML
         $perPage = (int) $request->input('per_page', 10);
-        $search  = trim((string) $request->input('search', ''));
-        $office  = trim((string) $request->input('office', ''));
+        $search = trim((string) $request->input('search', ''));
+        $office = trim((string) $request->input('office', ''));
 
         $q = User::query()
             ->where('status', 'Active')
             ->where('is_admin', '!=', 1);
 
-        if ($office !== '') $q->where('office', $office);
+        if ($office !== '') {
+            $q->where('office', $office);
+        }
 
         if ($search !== '') {
             $q->where(function ($qq) use ($search) {
                 $qq->where('name', 'like', "%{$search}%")
-                ->orWhere('employee_ID', 'like', "%{$search}%")
-                ->orWhere('office', 'like', "%{$search}%");
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
             });
         }
 
+
+
+        $offices = User::where('status', 'Active')->pluck('office')->unique()->values();
         $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+        $members->withPath(route('admin.savings'));
+        $userIds = $members->pluck('id');
+
+        $savingTotals = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $withdrawTotals = Withdraw::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('SUM(amount_withdrawn) as total'))
+            ->groupBy('employees_id')
+            ->pluck('total', 'employees_id');
+
+        $monthsContributedByUser = Saving::whereIn('employees_id', $userIds)
+            ->whereNotNull('covered_month')
+            ->select('employees_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('employees_id')
+            ->pluck('cnt', 'employees_id');
+
+        $firstRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MIN(date_remittance) as first'))
+            ->groupBy('employees_id')
+            ->pluck('first', 'employees_id');
+
+        $latestRemittanceByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_remittance) as latest'))
+            ->groupBy('employees_id')
+            ->pluck('latest', 'employees_id');
+
+        $latestUpdatedByUser = Saving::whereIn('employees_id', $userIds)
+            ->select('employees_id', DB::raw('MAX(date_updated) as updated'))
+            ->groupBy('employees_id')
+            ->pluck('updated', 'employees_id');
+
+        return view('admin.savings', compact(
+            'members',
+            'offices',
+            'perPage',
+            'savingTotals',
+            'withdrawTotals',
+            'monthsContributedByUser',
+            'firstRemittanceByUser',
+            'latestRemittanceByUser',
+            'latestUpdatedByUser'
+        ));
+    }
+
+    public function partial(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $search = trim((string) $request->input('search', ''));
+        $office = trim((string) $request->input('office', ''));
+
+        $q = User::query()
+            ->where('status', 'Active')
+            ->where('is_admin', '!=', 1);
+
+        if ($office !== '') {
+            $q->where('office', $office);
+        }
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('name', 'like', "%{$search}%")
+                    ->orWhere('employee_ID', 'like', "%{$search}%")
+                    ->orWhere('office', 'like', "%{$search}%");
+            });
+        }
+
+        // ✅ REQUIRED
+        $members = $q->orderBy('name')->paginate($perPage)->withQueryString();
+        $members->withPath(route('admin.savings'));
 
         $userIds = $members->pluck('id');
 
@@ -176,26 +247,25 @@ class SavingsController extends Controller
 
 
 
-
     public function bulkAddSavings(Request $request)
     {
-    try {
-        $request->validate([
-            'member_ids' => 'required|array',
-            'amount' => 'required|numeric|min:0.01',
-            'date_remittance' => 'required|date',
-            'remittance_no' => 'required|string|max:255',
-            'covered_month' => 'required|integer|min:1|max:12',
-             'covered_year' => 'required|integer|min:1900|max:' . date('Y'),
-        ]);
+        try {
+            $request->validate([
+                'member_ids' => 'required|array',
+                'amount' => 'required|numeric|min:0.01',
+                'date_remittance' => 'required|date',
+                'remittance_no' => 'required|string|max:255',
+                'covered_month' => 'required|integer|min:1|max:12',
+                'covered_year' => 'required|integer|min:1900|max:' . date('Y'),
+            ]);
 
-        $duplicates = [];
+            $duplicates = [];
 
-        // Loop through each selected member and insert into `savings` table
-        foreach ($request->member_ids as $memberId) {
-            $member = User::find($memberId);
+            // Loop through each selected member and insert into `savings` table
+            foreach ($request->member_ids as $memberId) {
+                $member = User::find($memberId);
 
-            // Log the current member being processed
+                // Log the current member being processed
                 \Log::info('Processing member:', ['memberId' => $memberId, 'memberName' => $member->name]);
 
                 // Check if the remittance already exists for this member
@@ -214,24 +284,24 @@ class SavingsController extends Controller
                     continue; // Skip adding the saving for this member
                 }
 
-            if ($member) {
-                // Insert into `savings` table including `date_created`
-                Saving::create([
-                    'employees_id' => $member->id,
-                    'name' => $member->name,
-                    'date_remittance' => now()->format('Y-m-d'),
-                    'amount' => $request->amount,
-                    'office' => $member->office ?? 'Unknown',
-                    'date_created' => now()->format('Y-m-d'), // ✅ Added
-                    'date_remittance' => $request->date_remittance,
-                    'remittance_no' => $request->remittance_no,
-                    'covered_month' => $request->covered_month,
-                    'covered_year' => $request->covered_year
-                ]);
+                if ($member) {
+                    // Insert into `savings` table including `date_created`
+                    Saving::create([
+                        'employees_id' => $member->id,
+                        'name' => $member->name,
+                        'date_remittance' => now()->format('Y-m-d'),
+                        'amount' => $request->amount,
+                        'office' => $member->office ?? 'Unknown',
+                        'date_created' => now()->format('Y-m-d'), // ✅ Added
+                        'date_remittance' => $request->date_remittance,
+                        'remittance_no' => $request->remittance_no,
+                        'covered_month' => $request->covered_month,
+                        'covered_year' => $request->covered_year
+                    ]);
+                }
             }
-        }
 
-        // Log the final response before sending it
+            // Log the final response before sending it
             \Log::info('Response for Bulk Add Savings', ['duplicates' => $duplicates]);
 
             return response()->json([
@@ -239,10 +309,10 @@ class SavingsController extends Controller
                 'duplicates' => $duplicates // Return duplicates array if it exists
             ]);
 
-    } catch (\Exception $e) {
-        \Log::error('Bulk Savings Error: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
+        } catch (\Exception $e) {
+            \Log::error('Bulk Savings Error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
 
     }
 
@@ -269,16 +339,16 @@ class SavingsController extends Controller
                     'amount' => $saving->amount,
                 ];
 
-                $newMonth = (int)date('m', strtotime($data['month_name']));
-                $newAmount = (float)$data['amount'];
-                $newYear = (int)$data['covered_year'];
+                $newMonth = (int) date('m', strtotime($data['month_name']));
+                $newAmount = (float) $data['amount'];
+                $newYear = (int) $data['covered_year'];
 
                 if (
                     $saving->date_remittance != $data['date_remittance'] ||
                     $saving->remittance_no != $data['remittance_no'] ||
-                    (int)$saving->covered_month != $newMonth ||
-                    (int)$saving->covered_year != $newYear ||
-                    (float)$saving->amount != $newAmount
+                    (int) $saving->covered_month != $newMonth ||
+                    (int) $saving->covered_year != $newYear ||
+                    (float) $saving->amount != $newAmount
                 ) {
                     $saving->date_remittance = $data['date_remittance'];
                     $saving->remittance_no = $data['remittance_no'];
@@ -319,16 +389,16 @@ class SavingsController extends Controller
             if ($saving) {
                 \Log::info('Original:', $saving->toArray());
 
-                $newMonth = (int)date('m', strtotime($data['month_name']));
-                $newAmount = (float)$data['amount'];
-                $newYear = (int)$data['covered_year'];
+                $newMonth = (int) date('m', strtotime($data['month_name']));
+                $newAmount = (float) $data['amount'];
+                $newYear = (int) $data['covered_year'];
 
                 if (
                     $saving->date_remittance != $data['date_remittance'] ||
                     $saving->remittance_no != $data['remittance_no'] ||
-                    (int)$saving->covered_month != $newMonth ||
-                    (int)$saving->covered_year != $newYear ||
-                    (float)$saving->amount != $newAmount
+                    (int) $saving->covered_month != $newMonth ||
+                    (int) $saving->covered_year != $newYear ||
+                    (float) $saving->amount != $newAmount
                 ) {
                     $saving->date_remittance = $data['date_remittance'];
                     $saving->remittance_no = $data['remittance_no'];

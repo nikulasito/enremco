@@ -1,6 +1,30 @@
 <x-admin-layout>
 <div class="content-wrapper">
         <div class="page-title"><h4>Loan Details</h4></div>
+        <div class="templates-container">
+            <div class="row mb-4">
+                <!-- Download Button on the Left -->
+                <div class="col-md-6 text-left">
+                    <a href="{{ url('/download/loans-template') }}" class="btn btn-success btn-block">Download Loans Template</a>
+                </div>
+                
+                <!-- Upload Form on the Right -->
+                <div class="col-md-6 text-right">
+                    <form action="{{ route('admin.upload-loans-template') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="file" name="file" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success btn-block">Upload Loans Template</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
         @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
         @endif
@@ -302,6 +326,14 @@
                         <input type="date" name="latest_payment" id="update_latest_payment" class="form-control">
                     </div>
 
+                    <div class="mb-3">
+                        <label>Remarks</label>
+                        <select name="remarks" id="update_remarks" class="form-control">
+                            <option value="New Loan">New Loan</option>
+                            <option value="Re-Loan">Re-Loan</option>
+                        </select>
+                    </div>
+
                     <button type="submit" class="btn btn-warning w-100">Update Loan</button>
                 </form>
             </div>
@@ -350,7 +382,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const URLS = {
         userDetails: @json(url('/admin/get-user-details')),   // + /{employeeId}
         coMaker:     @json(url('/admin/get-co-maker')),       // + /{name}
-        loanUpdate:  @json(url('/admin/loans/update')),       // + /{loanId}
+        loanUpdate: @json(route('admin.loans.update', ['loanId' => '__LOANID__'])),
         loanSearch:  @json(url('/admin/loans/search')),       // + ?q=
     };
 
@@ -521,7 +553,8 @@ document.querySelectorAll(".update-loan-btn").forEach(button => {
             let totalPayments = this.dataset.totalPayments || "0.00";
             let monthlyPayment = this.dataset.monthlyPayment || "0.00"; 
             let latestPayment = this.dataset.latestPayment || "";
-
+            let remarks = this.dataset.remarks || "";
+            
             // ✅ Helper function to safely set values
             function setValue(id, value) {
                 let element = document.getElementById(id);
@@ -531,7 +564,7 @@ document.querySelectorAll(".update-loan-btn").forEach(button => {
                     console.warn(`⚠️ Element with ID '${id}' not found.`);
                 }
             }
-
+            
             // ✅ Set values in modal
             setValue("update_loan_id", loanId);
             setValue("update_employee_id", employeeId);
@@ -541,13 +574,13 @@ document.querySelectorAll(".update-loan-btn").forEach(button => {
             setValue("update_total_payments", totalPayments);
             setValue("update_latest_payment", latestPayment);
             setValue("update_monthly_payment", monthlyPayment);
-
+            setValue("update_remarks", remarks);
+            
             // ✅ Set loan type dropdown
             let loanTypeDropdown = document.getElementById("update_loan_type");
             if (loanTypeDropdown) {
                 loanTypeDropdown.value = loanType;
             }
-
             // ✅ Show the modal
             updateLoanModal.show();
         });
@@ -555,55 +588,36 @@ document.querySelectorAll(".update-loan-btn").forEach(button => {
 
 
 document.getElementById("updateLoanForm").addEventListener("submit", function (event) {
-    event.preventDefault(); // Prevent default form submission
+  event.preventDefault();
 
-    let formData = new FormData(this);
-    
-    // ✅ Debugging: Check if loan_amount exists
-    console.log("🛠 FormData before submission:", Object.fromEntries(formData.entries()));
+  const loanId = document.getElementById("update_loan_id").value;
+  const formData = new FormData(this);
 
-    if (!formData.get("loan_amount")) {
-        console.error("🚨 Loan amount is missing from the request.");
-        return;
+  // IMPORTANT: method spoofing
+  formData.append("_method", "PATCH");
+
+  fetch(`${URLS.loanUpdate}/${encodeURIComponent(loanId)}`, {
+    method: "POST", // <-- use POST
+    body: formData,
+    headers: {
+      "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+      "Accept": "application/json"
     }
-
-    let loanId = document.getElementById("update_loan_id").value;
-
-    fetch(`${URLS.loanUpdate}/${encodeURIComponent(loanId)}`, {
-        method: "POST",
-        body: formData,
-        headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-            "Accept": "application/json"
-        },
-    })
-    .then(async response => {
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || 'Server error');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            let updateLoanModal = document.getElementById("updateLoanModal");
-            let modal = bootstrap.Modal.getInstance(updateLoanModal);
-            modal.hide();
-
-            let row = document.querySelector(`button[data-loan-id="${loanId}"]`).closest("tr");
-            if (row) {
-                // adjust column indices if your table layout changes
-                row.querySelector("td:nth-child(8)").textContent = data.loan.loan_amount; 
-                row.querySelector("td:nth-child(12)").textContent = data.loan.monthly_payment; 
-            }
-        } else {
-            console.error("⚠️ Error updating loan:", data.message);
-        }
-    })
-    .catch(error => {
-        console.error("🚨 Error updating loan:", error);
-    });
+  })
+  .then(async res => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Update failed");
+    return data;
+  })
+  .then(data => {
+    if (!data.success) throw new Error(data.message || "Update failed");
+    alert("✅ Loan updated!");
+    location.reload();
+  })
+  .catch(err => console.error("🚨 Error updating loan:", err));
 });
+
+
 
 
 //Search

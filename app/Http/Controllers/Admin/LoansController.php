@@ -9,6 +9,9 @@ use App\Models\LoanDetail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use App\Models\LoanPayment;
+use App\Exports\LoanTemplateExport;
+use App\Imports\LoanImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LoansController extends Controller {
     
@@ -234,48 +237,72 @@ public function getUserDetails($employee_id)
 public function updateLoan(Request $request, $loanId)
 {
     \Log::info('🛠 Incoming Loan Update Request:', $request->all());
-
+    \Log::info('✅ HIT updateLoan route', ['loanId' => $loanId]);
     try {
+        // 1) Sanitize numeric strings like "1,234.56"
+        foreach (['loan_amount', 'update_monthly_payment', 'total_payments', 'no_of_payments'] as $f) {
+            if ($request->has($f)) {
+                $request->merge([$f => str_replace(',', '', $request->input($f))]);
+            }
+        }
+
+        // 2) Validate
         $validated = $request->validate([
-            'loan_amount' => 'required|numeric|min:1',
-            'update_monthly_payment' => 'required|numeric|min:1',
-            'no_of_payments' => 'required|integer|min:0',
-            'total_payments' => 'required|numeric|min:0',
-            'latest_payment' => 'nullable|date',
-            'remarks' => 'required|string|in:New Loan,Re-Loan', // ✅ Add remarks validation
+            'loan_amount'             => 'sometimes|nullable|numeric|min:1',
+            'update_monthly_payment'  => 'sometimes|nullable|numeric|min:0',
+            'no_of_payments'          => 'sometimes|nullable|integer|min:0',
+            'total_payments'          => 'sometimes|nullable|numeric|min:0',
+            'latest_payment'          => 'sometimes|nullable|date',
+            'remarks'                 => 'sometimes|nullable|string|in:New Loan,Re-Loan',
         ]);
 
         $loan = LoanDetail::where('loan_id', $loanId)->firstOrFail();
-        $loan->update([
-            'loan_amount' => $validated['loan_amount'],
-            'monthly_payment' => $validated['update_monthly_payment'],
-            'remarks' => $validated['remarks'], // ✅ Update remarks
-        ]);
 
-        $loanPayment = LoanPayment::where('loan_id', $loanId)->first();
-        if ($loanPayment) {
-            $loanPayment->update([
-                'total_payments_count' => $validated['no_of_payments'],
-                'total_payments' => $validated['total_payments'],
-                'latest_payment' => $validated['latest_payment'],
-            ]);
+        // 3) Update LoanDetail (only fields present)
+        $loanData = array_filter([
+            'loan_amount'      => $validated['loan_amount'] ?? null,
+            'monthly_payment'  => $validated['update_monthly_payment'] ?? null,
+            'remarks'          => $validated['remarks'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (!empty($loanData)) {
+            $loan->update($loanData);
         }
+
+        // 4) Upsert LoanPayment (create if missing)
+        $loanPayment = LoanPayment::updateOrCreate(
+            ['loan_id' => $loanId],
+            array_filter([
+                'total_payments_count' => $validated['no_of_payments'] ?? null,
+                'total_payments'       => $validated['total_payments'] ?? null,
+                'latest_payment'       => $validated['latest_payment'] ?? null,
+            ], fn($v) => $v !== null)
+        );
 
         return response()->json([
             'success' => true,
             'loan' => [
-                'loan_amount' => $loan->loan_amount,
+                'loan_amount'     => $loan->loan_amount,
                 'monthly_payment' => $loan->monthly_payment,
-                'no_of_payments' => $loanPayment->total_payments_count ?? 0,
-                'total_payments' => $loanPayment->total_payments ?? "0.00",
-                'remarks' => $loan->remarks, // ✅ Return updated remarks
+                'no_of_payments'  => $loanPayment->total_payments_count ?? 0,
+                'total_payments'  => $loanPayment->total_payments ?? "0.00",
+                'latest_payment'  => $loanPayment->latest_payment ?? null,
+                'remarks'         => $loan->remarks,
             ]
         ]);
 
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors'  => $e->errors(),
+        ], 422);
     } catch (\Exception $e) {
+        \Log::error("🚨 Loan Update Error: " . $e->getMessage());
         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
 }
+
 
 
 
@@ -309,6 +336,19 @@ public function viewAllLoans(Request $request)
     return view('admin.loans.index', compact('loans', 'status'));
 }
 
+    public function downloadTemplate()
+    {
+        return Excel::download(new LoanTemplateExport, 'loans_template.xlsx');
+    }
 
+    public function uploadLoanTemplate(Request $request)
+    {
+        try {
+            Excel::import(new LoanImport, $request->file('file'));
+            return back()->with('success', '✅ Loans data uploaded successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 
 }

@@ -62,11 +62,25 @@ Route::post('/login', [LoginController::class, 'login'])->name('login');
 // Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth'])->name('dashboard');
 
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+
+    Route::get('/admin/members', [AdminController::class, 'viewMembers'])->name('admin.members');
+
+    Route::get('/admin/members/{id}/edit', [AdminController::class, 'editMember'])->name('admin.edit-member');
+
+    // ✅ keep only ONE update route + name
+    Route::patch('/admin/members/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
+
+    Route::get('/admin/new-members', [AdminController::class, 'newMembers'])->name('admin.new-members');
+    Route::patch('/admin/approve-member/{id}', [AdminController::class, 'approveMember'])->name('admin.approve-member');
+    Route::patch('/admin/disapprove-member/{id}', [AdminController::class, 'disapproveMember'])->name('admin.disapprove-member');
+
+    Route::delete('/admin/delete-member/{id}', [AdminController::class, 'deleteMember'])->name('admin.delete-member');
+});
 
 // Admin routes with middleware applied directly
 Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/admin/members', [AdminController::class, 'viewMembers'])->name('admin.members');
 });
 
 //Shares
@@ -81,16 +95,24 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 
 //Savings
-Route::middleware(['auth', IsAdmin::class])->group(function () {
-    Route::get('/admin/savings', [SavingsController::class, 'controllerSavings'])->name('admin.savings');
-    Route::post('/admin/savings/add', [SavingsController::class, 'addSavings'])->name('admin.savings.add');
-});
-Route::middleware(['auth', IsAdmin::class])->group(function () {
-    Route::get('/admin/savings', [SavingsController::class, 'controllerSavings'])->name('admin.savings');
-    Route::post('/admin/bulk-add-savings', [SavingsController::class, 'bulkAddSavings'])->name('admin.bulk-add-savings');
-});
-Route::get('/admin/savings/partial', [SavingsController::class, 'partial'])
-    ->name('admin.savings.partial');
+Route::middleware(['auth', IsAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        // Main page
+        Route::get('/savings', [SavingsController::class, 'index'])->name('savings');
+
+        // AJAX partial for live search + pagination
+        Route::get('/savings/partial', [SavingsController::class, 'partial'])->name('savings.partial');
+
+        // Bulk add
+        Route::post('/bulk-add-savings', [SavingsController::class, 'bulkAddSavings'])->name('bulk-add-savings');
+
+        // Update remittances (modal)
+        Route::post('/update-saving-remittances', [SavingsController::class, 'updateSavingsRemittances'])
+            ->name('update-saving-remittances');
+    });
 
 //Start Loans
 Route::middleware(['auth', IsAdmin::class])->group(function () {
@@ -117,8 +139,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 Route::get('/download/withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'downloadTemplate']);
 Route::post('/admin/upload-withdraw-template', [\App\Http\Controllers\Admin\WithdrawController::class, 'uploadWithdrawTemplate'])->name('withdraw.upload');
 
-Route::get('/admin/withdraw', [WithdrawController::class, 'controllerWithdraw'])->name('admin.withdraw');
-Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->name('admin.withdraw.partial');
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/admin/withdraw', [WithdrawController::class, 'controllerWithdraw'])->name('admin.withdraw');
+    Route::get('/admin/withdraw/partial', [WithdrawController::class, 'partial'])->name('admin.withdraw.partial');
+});
 
 
 
@@ -133,6 +157,8 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::post('/admin/loans/store', [LoansController::class, 'store'])->name('admin.store-loan');
     Route::get('/admin/get-user-details/{employee_id}', [LoansController::class, 'getUserDetails']);
 });
+Route::patch('/admin/loans/update/{loanId}', [LoansController::class, 'updateLoan'])
+    ->name('admin.loans.update');
 Route::get('/admin/get-co-maker/{name}', [LoansController::class, 'getCoMakerDetails']);
 Route::patch('/admin/loans/update', [LoansController::class, 'updateLoan'])->name('admin.update-loan');
 Route::get('/admin/loan-payments', [LoanPaymentController::class, 'loanPayments'])->name('admin.loan-payments');
@@ -140,6 +166,10 @@ Route::post('/admin/loan-payments/store', [LoanPaymentController::class, 'storeL
 Route::post('/admin/loan-payments/store-bulk', [LoanPaymentController::class, 'storeBulkLoanPayments']);
 Route::post('/admin/loan-payments/update', [LoanPaymentController::class, 'updateLoanPayment'])->name('admin.loan-payments.update');
 Route::get('/admin/loan-payments/remittance/{remittanceNo}/{loanId}', [LoanPaymentController::class, 'getByRemittance']);
+
+Route::get('/download/loans-template', [LoansController::class, 'downloadTemplate']);
+Route::post('/admin/upload-loans-template', [LoansController::class, 'uploadLoanTemplate'])->name('admin.upload-loans-template');
+
 Route::middleware(['auth', IsAdmin::class])->group(function () {
     // Include this line:
     Route::post('/admin/update-remittances', [SharesController::class, 'updateRemittances'])->name('admin.update-remittances');
@@ -148,7 +178,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 });
 
-
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/admin/shares', [SharesController::class, 'controllerShares'])->name('admin.shares');
+    Route::get('/admin/shares/partial', [SharesController::class, 'partial'])->name('admin.shares.partial');
+});
 
 
 
@@ -202,8 +235,6 @@ Route::patch('/admin/approve-member/{id}', [AdminController::class, 'approveMemb
 //Route::get('/admin/edit-member/{id}', [AdminController::class, 'editMember'])->name('admin.edit-member');
 Route::get('/admin/members/{id}/edit', [AdminController::class, 'editMember'])->name('admin.edit-member');
 
-Route::patch('/admin/update-member/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
-
 Route::delete('/admin/delete-member/{id}', [AdminController::class, 'deleteMember'])->name('admin.delete-member');
 
 Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
@@ -221,14 +252,12 @@ Route::post('/register', [RegisteredUserController::class, 'store'])->name('regi
 Route::get('/user/preview/{id}', [RegisteredUserController::class, 'preview'])->name('user.preview');
 
 
-//Route::patch('/admin/members/{id}/approve', [AdminController::class, 'approveMember'])->name('admin.members.approve');
-Route::patch('/admin/members/{id}', [AdminController::class, 'updateMember'])->name('admin.update-member');
-
-
 // Route::get('/profile', [ProfileController::class, 'show'])->middleware(['auth', 'verified'])->name('profile');
 Route::get('/profile', [ProfileController::class, 'show'])->middleware(['auth'])->name('profile');
 
-Route::get('/member/profile', [MemberController::class, 'show'])->name('member.profile');
+Route::get('/member/profile', [MemberController::class, 'show'])
+    ->middleware(['auth'])
+    ->name('member.profile');
 Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 
 Route::get('/profile/changepassword', function () {
@@ -286,18 +315,6 @@ Route::get('/verify-email-info', function () {
 });
 
 
-Route::post('/admin/approve-member/{id}', function ($id) {
-    $user = User::findOrFail($id);
-
-    // Update the status to approved
-    $user->update(['status' => 'Active']);
-
-    // Send email for verification
-    $user->sendEmailVerificationNotification();
-
-    return back()->with('success', 'Member approved and verification email sent.');
-})->name('admin.approve_member');
-
 Route::patch('/admin/disapprove-member/{id}', [AdminController::class, 'disapproveMember'])->name('admin.disapprove-member');
 
 
@@ -322,5 +339,5 @@ Route::get('/admin/get-user-details/{id}', [AdminController::class, 'getUserDeta
 
 
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 

@@ -1,186 +1,96 @@
-<x-app-layout>
-    <!-- 🔹 Main Content -->
-    <div class="home-details details-container">
-        
-        <div class="row contributions-cont">
-            <div class="col-12 mb-4 order-0 d-none d-xl-flex">
-                Introducing our new Member Portal—a space where simplicity meets functionality. Effortlessly manage your account details, access exclusive benefits, and explore new features that have been thoughtfully designed to enhance your experience. Enjoy a smoother, more intuitive way to stay connected and in control.
-            </div>
-            <div class="col-lg-4 col-md-0 mb-2 mb-xl-4 order-1">
-                <div class="card h-100 px-0 px-lg-4">
-                    <div class="card-body pb-4">
-                        <div class="d-flex justify-content-start align-items-center">
-                            <h5 class="ms-2 mb-0">Contributions</h5>
-                        </div>
-                        <div class="d-flex align-items-center mb-3">
-                            <img src="/build/assets/contribution.jpg">
-                        </div>
-                        <div class="contributions-btn">
-                            <a href="{{ route('member.contributions') }}" class="btn btn-sm btn-label-primary">View Contributions</a>
-                        </div>
-                        <!-- <div class="total-contributions">
-                            @php
-                                $totalContributions = (isset($totalShares) && $totalShares !== null ? $totalShares : 0) 
-                                                    + (isset($totalSavingsDisplayed) && $totalSavingsDisplayed !== null ? $totalSavingsDisplayed : 0);
-                            @endphp
-                            <h4 class="mb-0">
-                            &#8369; {{ $totalContributions > 0 ? number_format($totalContributions, 2) : 'N/A' }}
-                            </h4>
-                            <small>Total amount of contributions</small>
-                        </div> -->
+<x-member-layout title="ENREMCO Member Dashboard Overview">
+    @php
+        $sharesAmount = isset($totalShares) && $totalShares !== null ? $totalShares : 0;
+        $sharesMonths = isset($totalEntries) && $totalEntries !== null ? $totalEntries : null;
+
+        $savingsAmount = isset($totalSavingsDisplayed) && $totalSavingsDisplayed !== null ? $totalSavingsDisplayed : 0;
+        $savingsMonths = isset($totalSavingsEntries) && $totalSavingsEntries !== null ? $totalSavingsEntries : null;
+      @endphp
+
+    <section>
+        <div class="mb-6 flex items-center justify-between">
+            <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">analytics</span>
+                Summary of Contributions
+            </h3>
+            <a href="{{ route('member.contributions') }}" class="text-sm font-bold text-secondary hover:underline">
+                View History
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-8 rounded-2xl border border-slate-200 card-shadow">
+                <div class="flex items-start justify-between mb-8">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Share Capital</h4>
+                        <p class="mt-2 text-4xl font-black text-slate-900">₱{{ number_format($sharesAmount, 2) }}</p>
+                    </div>
+                    <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl">pie_chart</span>
                     </div>
                 </div>
+                <div class="flex items-center justify-between py-4 border-t border-slate-50">
+                    <span class="text-slate-500 font-medium">Total Months Contributed</span>
+                    <span
+                        class="text-slate-900 font-bold">{{ $sharesMonths !== null ? $sharesMonths . ' Months' : 'N/A' }}</span>
+                </div>
             </div>
-            <div class="col-lg-8 col-md-0 mb-2 mb-xl-4 order-1">
-                <div class="card h-100 px-0 px-lg-4">
-                    <div class="card-body pb-4">
-                        <div class="d-flex justify-content-start align-items-center">
-                            <h5 class="mb-0">Summary of Contributions</h5>
-                        </div>
-                            <!-- 🔹 Shares Summary -->
-                            <div class="mt-3">
-                                <h5>Shares</h5>
-                                <table class="table table-bordered">
-                                    <tr>
-                                        <td>Total Months Contributed</td>
-                                        <td>{{ isset($totalEntries) && $totalEntries !== null ? $totalEntries : 'N/A' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total Amount of Shares</td>
-                                        <td>{{ isset($totalShares) && $totalShares !== null ? number_format($totalShares, 2) : 'N/A' }}</td>
-                                    </tr>
-                                </table>
-                            </div>
 
-                            <!-- 🔹 Savings Summary -->
-                            <div class="mt-3">
-                                <h5>Savings</h5>
-                                <table class="table table-bordered">
-                                    <tr>
-                                        <td>Total Months Contributed</td>
-                                        <td>{{ isset($totalSavingsEntries) && $totalSavingsEntries !== null ? $totalSavingsEntries : 'N/A' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total Amount of Savings</td>
-                                        <td>{{ isset($totalSavingsDisplayed) && $totalSavingsDisplayed !== null ? number_format($totalSavingsDisplayed, 2) : 'N/A' }}</td>
-                                    </tr>
-                                </table>
-                            </div>
+            <div class="bg-white p-8 rounded-2xl border border-slate-200 card-shadow">
+                <div class="flex items-start justify-between mb-8">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Savings Deposit</h4>
+                        <p class="mt-2 text-4xl font-black text-slate-900">₱{{ number_format($savingsAmount, 2) }}</p>
                     </div>
+                    <div class="size-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl">savings</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between py-4 border-t border-slate-50">
+                    <span class="text-slate-500 font-medium">Total Months Contributed</span>
+                    <span
+                        class="text-slate-900 font-bold">{{ $savingsMonths !== null ? $savingsMonths . ' Months' : 'N/A' }}</span>
                 </div>
             </div>
         </div>
-        <div class="card position-relative">
-            <div class="card-body services-body disabled-section">
-                <h4>Services</h4>
-                <div class="row">
-                    <div class="col-12 mb-4 order-0 d-none d-xl-flex">
-                        <p>ENREMCO provides a range of affordable and flexible loan services tailored to meet the diverse needs of its members. With low interest rates, convenient payment terms, and a member-first approach, ENREMCO is committed to empowering members through reliable financial support.</p>
-                    </div>
-                    <div class="col-lg-3 col-md-0 mb-2 mb-xl-4 order-1">
-                        <div class="card h-100 px-0">
-                            <div class="card-body">
-                                <div class="justify-content-start loans">
-                                    <h5 class="ms-2 mb-0">Regular Loan</h5>
-                                    <small>For general personal and financial needs.</small>
-                                </div>
-                                <ul class="p-0 m-0">
-                                    <li class="d-flex pb-1">
-                                        <div class="card-body px-0">
-                                            <div class="bg-label-primary rounded-3 text-center mb-3">
-                                                <img src="/build/assets/regular.jpg">
-                                            </div>
-                                            <div class="loan-button">
-                                                <div>
-                                                    <a href="#" data-mod="93" class="btn btn-sm btn-label-primary">Apply</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-0 mb-2 mb-xl-4 order-1">
-                        <div class="card h-100 px-0">
-                            <div class="card-body">
-                                <div class="justify-content-start loans">
-                                    <h5 class="ms-2 mb-0">Educational Loan</h5>
-                                    <small>To support tuition fees and school-related expenses.</small>
-                                </div>
-                                <ul class="p-0 m-0">
-                                    <li class="d-flex pb-1">
-                                        <div class="card-body px-0">
-                                            <div class="bg-label-primary rounded-3 text-center mb-3">
-                                                <img src="/build/assets/educational.jpg">
-                                            </div>
-                                            <div class="loan-button">
-                                                <div>
-                                                    <a href="#" data-mod="93" class="btn btn-sm btn-label-primary">Apply</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-0 mb-2 mb-xl-4 order-1">
-                        <div class="card h-100 px-0">
-                            <div class="card-body">
-                                <div class="justify-content-start loans">
-                                    <h5 class="ms-2 mb-0">Appliance Loan</h5>
-                                    <small>For purchasing essential home appliances.</small>
-                                </div>
-                                <ul class="p-0 m-0">
-                                    <li class="d-flex pb-1">
-                                        <div class="card-body px-0">
-                                            <div class="bg-label-primary rounded-3 text-center mb-3">
-                                                <img src="/build/assets/appliance.jpg">
-                                            </div>
-                                            <div class="loan-button">
-                                                <div>
-                                                    <a href="#" data-mod="93" class="btn btn-sm btn-label-primary">Apply</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-0 mb-2 mb-xl-4 order-1">
-                        <div class="card h-100 px-0">
-                            <div class="card-body">
-                                <div class="justify-content-start loans">
-                                    <h5 class="ms-2 mb-0">Grocery Loan</h5>
-                                    <small>To help with daily food and household essentials.</small>
-                                </div>
-                                <ul class="p-0 m-0">
-                                    <li class="d-flex pb-1">
-                                        <div class="card-body px-0">
-                                            <div class="bg-label-primary rounded-3 text-center mb-3">
-                                                <img src="/build/assets/grocery.jpg">
-                                            </div>
-                                            <div class="loan-button">
-                                                <div>
-                                                    <a href="#" data-mod="93" class="btn btn-sm btn-label-primary">Apply</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+    </section>
 
-                </div>
-                                <!-- 🔹 Coming Soon Overlay -->
-                <div class="coming-soon-overlay">
-                    <h3 class="text-white">Coming Soon</h3>
-                </div>
-            </div>
+    {{-- Loan Services UI (buttons still placeholders) --}}
+    <section>
+        <div class="mb-6">
+            <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">handshake</span>
+                Available Loan Services
+            </h3>
         </div>
 
-    </div>
-</x-app-layout>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            @php
+                $loans = [
+                    ['title' => 'Regular Loan', 'icon' => 'account_balance', 'desc' => 'Multi-purpose loan for your diverse financial needs.', 'style' => 'primary'],
+                    ['title' => 'Educational Loan', 'icon' => 'school', 'desc' => 'Support for tuition and school expenses.', 'style' => 'secondary'],
+                    ['title' => 'Appliance Loan', 'icon' => 'kitchen', 'desc' => 'Upgrade your home with flexible installment plans.', 'style' => 'primary'],
+                    ['title' => 'Grocery Loan', 'icon' => 'shopping_cart', 'desc' => 'Immediate assistance for your daily essentials.', 'style' => 'secondary'],
+                ];
+              @endphp
+
+            @foreach($loans as $loan)
+                <div
+                    class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow flex flex-col items-center text-center">
+                    <div class="size-16 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-3xl">{{ $loan['icon'] }}</span>
+                    </div>
+
+                    <h4 class="text-lg font-bold text-slate-900">{{ $loan['title'] }}</h4>
+                    <p class="mt-2 text-sm text-slate-500 leading-relaxed min-h-[40px]">{{ $loan['desc'] }}</p>
+
+                    <button class="mt-6 w-full py-3 px-4 rounded-xl
+                    {{ $loan['style'] === 'secondary' ? 'bg-secondary text-white shadow-md shadow-secondary/10' : 'bg-primary text-background-dark shadow-md shadow-primary/10' }}
+                    font-black text-sm transition-all hover:brightness-105 active:scale-95" disabled>
+                        Apply Now
+                    </button>
+                </div>
+            @endforeach
+        </div>
+    </section>
+</x-member-layout>
