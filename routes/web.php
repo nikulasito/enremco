@@ -95,16 +95,24 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 
 //Savings
-Route::middleware(['auth', IsAdmin::class])->group(function () {
-    Route::get('/admin/savings', [SavingsController::class, 'controllerSavings'])->name('admin.savings');
-    Route::post('/admin/savings/add', [SavingsController::class, 'addSavings'])->name('admin.savings.add');
-});
-Route::middleware(['auth', IsAdmin::class])->group(function () {
-    Route::get('/admin/savings', [SavingsController::class, 'controllerSavings'])->name('admin.savings');
-    Route::post('/admin/bulk-add-savings', [SavingsController::class, 'bulkAddSavings'])->name('admin.bulk-add-savings');
-});
-Route::get('/admin/savings/partial', [SavingsController::class, 'partial'])
-    ->name('admin.savings.partial');
+Route::middleware(['auth', IsAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        // Main page
+        Route::get('/savings', [SavingsController::class, 'index'])->name('savings');
+
+        // AJAX partial for live search + pagination
+        Route::get('/savings/partial', [SavingsController::class, 'partial'])->name('savings.partial');
+
+        // Bulk add
+        Route::post('/bulk-add-savings', [SavingsController::class, 'bulkAddSavings'])->name('bulk-add-savings');
+
+        // Update remittances (modal)
+        Route::post('/update-saving-remittances', [SavingsController::class, 'updateSavingsRemittances'])
+            ->name('update-saving-remittances');
+    });
 
 //Start Loans
 Route::middleware(['auth', IsAdmin::class])->group(function () {
@@ -168,7 +176,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 });
 
-
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/admin/shares', [SharesController::class, 'controllerShares'])->name('admin.shares');
+    Route::get('/admin/shares/partial', [SharesController::class, 'partial'])->name('admin.shares.partial');
+});
 
 
 

@@ -248,9 +248,9 @@
                                     {{ $lastUpdated ? \Carbon\Carbon::parse($lastUpdated)->format('Y-m-d') : '—' }}
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex flex-col gap-2 min-w-0">
                                         <button type="button"
-                                            class="w-40 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-black text-[#112119] hover:brightness-110 transition"
+                                            class="w-full inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-black text-[#112119] hover:brightness-110 transition"
                                             data-open-modal="updateDetailsModal" data-id="{{ $member->id }}"
                                             data-employee_id="{{ $member->employee_ID }}" data-name="{{ $member->name }}"
                                             data-office="{{ $member->office }}" data-contribution="{{ $member->shares }}"
@@ -262,7 +262,7 @@
                                         </button>
 
                                         <button type="button"
-                                            class="w-40 inline-flex items-center justify-center rounded-lg bg-[#112119] px-4 py-2 text-sm font-black text-white hover:opacity-90 transition"
+                                            class="w-full inline-flex items-center justify-center rounded-lg bg-[#112119] px-3 py-2 text-xs font-black text-white hover:opacity-90 transition"
                                             data-open-modal="viewDetailsModal" data-id="{{ $member->id }}"
                                             data-employee_id="{{ $member->employee_ID }}" data-name="{{ $member->name }}"
                                             data-office="{{ $member->office }}" data-contribution="{{ $member->shares }}"
@@ -642,7 +642,7 @@
                         if (searchBtn) searchBtn.setAttribute('data-user-update-id', currentUpdateUserId);
 
                         // Fill header card
-                        document.getElementById('upd_memberIdLine').textContent = `Member ID: ${btn.dataset.employee_id || '—'}`;
+                        document.getElementById('upd_memberIdLine').textContent = `Member ID: ${btn.getAttribute('data-employee_id') || '—'}`;
                         document.getElementById('upd_memberName').textContent = btn.dataset.name || '—';
                         document.getElementById('upd_memberOffice').textContent = btn.dataset.office || '—';
                         document.getElementById('upd_monthlyShare').textContent = btn.dataset.contribution ? `₱ ${btn.dataset.contribution}` : '—';
@@ -663,7 +663,7 @@
                     if (modalId === 'viewDetailsModal') {
                         currentViewUserId = btn.dataset.id;
 
-                        document.getElementById('modalEmployeeID').textContent = btn.dataset.employee_id || '—';
+                        document.getElementById('modalEmployeeID').textContent = btn.getAttribute('data-employee_id') || '—';
                         document.getElementById('modalName').textContent = btn.dataset.name || '—';
                         document.getElementById('modalOffice').textContent = btn.dataset.office || '—';
                         document.getElementById('modalContribution').textContent = btn.dataset.contribution ? `₱ ${btn.dataset.contribution}` : '—';
@@ -692,64 +692,64 @@
                     const requestUrl = `/admin/get-contributions/${encodeURIComponent(userId)}/${encodeURIComponent(query || 'all')}`;
 
                     remittanceResult.innerHTML = `
-                                            <div class="mt-4 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                                Loading records...
-                                            </div>
-                                        `;
+                                                                    <div class="mt-4 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                        Loading records...
+                                                                    </div>
+                                                                `;
 
                     fetch(requestUrl)
                         .then(r => r.json())
                         .then(data => {
                             if (!data.success || !Array.isArray(data.contributions) || data.contributions.length === 0) {
                                 remittanceResult.innerHTML = `
-                                                        <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                                            ${data.message || 'No contributions found.'}
-                                                        </div>
-                                                    `;
+                                                                                <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                                    ${data.message || 'No contributions found.'}
+                                                                                </div>
+                                                                            `;
                                 saveBtn.classList.add('hidden');
                                 return;
                             }
 
                             let html = `
-                                                    <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
-                                                        <table class="w-full text-left">
-                                                            <thead>
-                                                                <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
-                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
-                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
-                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
-                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
-                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
-                                                `;
+                                                                            <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                <table class="w-full text-left">
+                                                                                    <thead>
+                                                                                        <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                                                        `;
 
                             data.contributions.forEach((c, i) => {
                                 html += `
-                                                        <tr data-share-id="${c.shares_id}">
-                                                            <td class="px-6 py-3">
-                                                                <input type="date" name="date_remittance_${i}" value="${c.date_remittance || ''}"
-                                                                    class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
-                                                            </td>
-                                                            <td class="px-6 py-3">
-                                                                <input type="text" name="remittance_no_${i}" value="${c.remittance_no || ''}"
-                                                                    class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
-                                                            </td>
-                                                            <td class="px-6 py-3">
-                                                                <input type="text" name="month_name_${i}" value="${c.month_name || ''}"
-                                                                    class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
-                                                            </td>
-                                                            <td class="px-6 py-3">
-                                                                <input type="text" name="covered_year_${i}" value="${c.covered_year || ''}"
-                                                                    class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
-                                                            </td>
-                                                            <td class="px-6 py-3">
-                                                                <input type="number" step="any" min="0" name="amount_${i}" value="${c.amount || ''}"
-                                                                    class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
-                                                            </td>
-                                                        </tr>
-                                                    `;
+                                                                                <tr data-share-id="${c.shares_id}">
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="date" name="date_remittance_${i}" value="${c.date_remittance || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="remittance_no_${i}" value="${c.remittance_no || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="month_name_${i}" value="${c.month_name || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="text" name="covered_year_${i}" value="${c.covered_year || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                    <td class="px-6 py-3">
+                                                                                        <input type="number" step="any" min="0" name="amount_${i}" value="${c.amount || ''}"
+                                                                                            class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3 focus:ring-2 focus:ring-primary">
+                                                                                    </td>
+                                                                                </tr>
+                                                                            `;
                             });
 
                             html += `</tbody></table></div>`;
@@ -760,10 +760,10 @@
                         .catch(err => {
                             console.error(err);
                             remittanceResult.innerHTML = `
-                                                    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">
-                                                        Failed to load contributions.
-                                                    </div>
-                                                `;
+                                                                            <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">
+                                                                                Failed to load contributions.
+                                                                            </div>
+                                                                        `;
                             saveBtn.classList.add('hidden');
                         });
                 };
@@ -827,38 +827,38 @@
                 const renderViewTable = (list) => {
                     if (!Array.isArray(list) || list.length === 0) {
                         contributionsResult.innerHTML = `
-                                        <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                            No contributions found.
-                                        </div>
-                                        `;
+                                                                <div class="mt-4 rounded-xl border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#0d1a14] p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                    No contributions found.
+                                                                </div>
+                                                                `;
                         return;
                     }
 
                     let html = `
-                                                <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
-                                                <table class="w-full text-left">
-                                                    <thead>
-                                                    <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
-                                                        <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
-                                            `;
+                                                                        <div class="mt-5 overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                        <table class="w-full text-left">
+                                                                            <thead>
+                                                                            <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Remittance No.</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                                                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                                            </tr>
+                                                                            </thead>
+                                                                            <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                                                    `;
 
                     list.forEach((c) => {
                         html += `
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                                                    <td class="px-6 py-4 text-sm text-[#111814] dark:text-white">${c.date_remittance || '—'}</td>
-                                                    <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.remittance_no || '—'}</td>
-                                                    <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.month_name || '—'}</td>
-                                                    <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.covered_year || '—'}</td>
-                                                    <td class="px-6 py-4 text-sm font-black text-[#111814] dark:text-white">${c.amount ?? '—'}</td>
-                                                </tr>
-                                                `;
+                                                                        <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                                                            <td class="px-6 py-4 text-sm text-[#111814] dark:text-white">${c.date_remittance || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.remittance_no || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.month_name || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm text-[#638875] dark:text-[#a0b0a8]">${c.covered_year || '—'}</td>
+                                                                            <td class="px-6 py-4 text-sm font-black text-[#111814] dark:text-white">${c.amount ?? '—'}</td>
+                                                                        </tr>
+                                                                        `;
                     });
 
                     html += `</tbody></table></div>`;
@@ -873,18 +873,18 @@
                     const requestUrl = `/admin/get-contributions/${encodeURIComponent(currentViewUserId)}/${encodeURIComponent(year || 'all')}`;
 
                     contributionsResult.innerHTML = `
-                                            <div class="p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">Loading...</div>
-                                        `;
+                                                                    <div class="p-5 text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">Loading...</div>
+                                                                `;
 
                     fetch(requestUrl)
                         .then(r => r.json())
                         .then(data => {
                             if (!data.success) {
                                 contributionsResult.innerHTML = `
-                                                        <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
-                                                            ${data.message || 'Failed to load.'}
-                                                        </div>
-                                                    `;
+                                                                                <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
+                                                                                    ${data.message || 'Failed to load.'}
+                                                                                </div>
+                                                                            `;
                                 return;
                             }
                             renderViewTable(data.contributions || []);
@@ -892,10 +892,10 @@
                         .catch(err => {
                             console.error(err);
                             contributionsResult.innerHTML = `
-                                                    <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
-                                                        Failed to load contributions.
-                                                    </div>
-                                                `;
+                                                                            <div class="p-5 text-sm font-bold text-red-700 bg-red-50 border border-red-200">
+                                                                                Failed to load contributions.
+                                                                            </div>
+                                                                        `;
                         });
                 };
 
