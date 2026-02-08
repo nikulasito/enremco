@@ -209,55 +209,12 @@
                 </thead>
 
                 <tbody id="membersTableBody" class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32]">
-                    @php $i = $members->firstItem() ?? 1; @endphp
-
-                    @forelse($members as $m)
-                        @php
-                            $uid = $m->id;
-                            $totalWithdraw = (float) ($withdrawTotals[$uid] ?? 0);
-                            $latestWithdraw = $latestWithdrawByUser[$uid] ?? null;
-                        @endphp
-
-                        <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors memberRow"
-                            data-name="{{ strtolower($m->name) }}" data-id="{{ strtolower($m->employee_ID) }}"
-                            data-office="{{ strtolower($m->office) }}">
-
-                            <td class="px-6 py-4">
-                                <input type="checkbox" class="memberCheckbox" value="{{ $m->id }}">
-                            </td>
-
-                            <td class="px-6 py-4 font-medium">{{ $i++ }}</td>
-                            <td class="px-6 py-4 font-black text-primary">{{ $m->employee_ID }}</td>
-                            <td class="px-6 py-4 font-black">{{ $m->name }}</td>
-                            <td class="px-6 py-4">{{ $m->office }}</td>
-
-                            <td class="px-6 py-4 text-[#638875] dark:text-[#a0b0a8]">
-                                {{ $latestWithdraw ?? '—' }}
-                            </td>
-
-                            <td class="px-6 py-4 font-black">
-                                {{ number_format($totalWithdraw, 2) }}
-                            </td>
-
-                            <td class="px-6 py-4">
-                                <button type="button"
-                                    class="inline-flex items-center justify-center rounded-lg bg-[#112119] px-4 py-2 text-xs font-black text-white hover:opacity-90 transition view-withdrawals-btn"
-                                    data-open-modal="viewWithdrawalsModal" data-id="{{ $m->id }}"
-                                    data-employee_id="{{ $m->employee_ID }}" data-name="{{ $m->name }}"
-                                    data-office="{{ $m->office }}">
-                                    View / Edit
-                                </button>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8"
-                                class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                No records found
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
+    @include('admin.withdraw._rows', [
+        'members' => $members,
+        'withdrawTotals' => $withdrawTotals,
+        'latestWithdrawByUser' => $latestWithdrawByUser,
+    ])
+</tbody>
             </table>
         </div>
 
@@ -376,11 +333,116 @@
 
                 searchInput?.addEventListener('input', () => {
                     clearTimeout(t);
-                    t = setTimeout(() => filtersForm.submit(), 300);
                 });
 
-                officeSelect?.addEventListener('change', () => filtersForm.submit());
-                perPageSelect?.addEventListener('change', () => filtersForm.submit());
+                // ===== AJAX partial/live search (same as Savings/Shares) =====
+const partialUrl = @json(route('admin.withdraw.partial'));
+
+const tbody = document.getElementById('membersTableBody');
+const paginationWrap = document.getElementById('withdrawPagination');
+
+if (!filtersForm || !searchInput || !officeSelect || !perPageSelect || !tbody || !paginationWrap) return;
+
+let debounceTimer = null;
+
+const buildParams = (page = 1) => {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('search', (searchInput.value || '').trim());
+    params.set('office', (officeSelect.value || '').trim());
+    params.set('per_page', perPageSelect.value || 10);
+    return params;
+};
+
+const syncUrl = (params) => {
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, '', newUrl);
+};
+
+const fetchPartial = async (page = 1, pushUrl = true) => {
+    const params = buildParams(page);
+
+    // loading state
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                Loading...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const res = await fetch(`${partialUrl}?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+
+        tbody.innerHTML = data.tbody ?? '';
+        paginationWrap.innerHTML = data.pagination ?? '';
+
+        // reset select all after refresh
+        const selectAllBox = document.getElementById('selectAll');
+        if (selectAllBox) selectAllBox.checked = false;
+
+        if (pushUrl) syncUrl(params);
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-10 text-center text-sm font-bold text-red-700">
+                    Failed to load records.
+                </td>
+            </tr>
+        `;
+    }
+};
+
+// prevent normal submit (Enter key)
+filtersForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    fetchPartial(1);
+});
+
+// debounced typing
+searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchPartial(1), 300);
+});
+
+// filter changes
+officeSelect.addEventListener('change', () => fetchPartial(1));
+perPageSelect.addEventListener('change', () => fetchPartial(1));
+
+// clear (keep per_page)
+clearBtn?.addEventListener('click', () => {
+    searchInput.value = '';
+    officeSelect.value = '';
+    fetchPartial(1);
+});
+
+// pagination click (AJAX)
+paginationWrap.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+    e.preventDefault();
+
+    const url = new URL(link.href);
+    const page = url.searchParams.get('page') || 1;
+    fetchPartial(page);
+});
+
+// back/forward support
+window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+
+    searchInput.value = params.get('search') || '';
+    officeSelect.value = params.get('office') || '';
+    perPageSelect.value = params.get('per_page') || (perPageSelect.value || 10);
+
+    fetchPartial(params.get('page') || 1, false);
+});
+
+
 
                 clearBtn?.addEventListener('click', () => {
                     const per = perPageSelect?.value || 10;
@@ -489,69 +551,69 @@
                         .then(r => r.json())
                         .then(data => {
                             let html = `
-                                            <div class="overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
-                                                <table class="w-full text-left">
-                                                    <thead>
-                                                        <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
-                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
-                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Reference No.</th>
-                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
-                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
-                                                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
-                                        `;
+                                                    <div class="overflow-x-auto rounded-xl border border-[#dce5e0] dark:border-[#2a3a32]">
+                                                        <table class="w-full text-left">
+                                                            <thead>
+                                                                <tr class="bg-[#f6f8f7] dark:bg-[#0d1a14]/50 border-b border-[#dce5e0] dark:border-[#2a3a32]">
+                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Date</th>
+                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Reference No.</th>
+                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Month</th>
+                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Year</th>
+                                                                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#638875] dark:text-[#a0b0a8]">Amount</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody class="divide-y divide-[#dce5e0] dark:divide-[#2a3a32] bg-white dark:bg-[#0d1a14]">
+                                                `;
 
                             if (data.success && data.withdrawals.length > 0) {
                                 data.withdrawals.forEach((w, i) => {
                                     html += `
-                                                    <tr data-withdrawals-id="${w.withdrawals_id}">
-                                                        <td class="px-6 py-3">
-                                                            <input type="date" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                                name="date_of_withdrawal_${i}" value="${w.date_of_withdrawal || ''}">
-                                                        </td>
-                                                        <td class="px-6 py-3">
-                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                                name="reference_no_${i}" value="${w.reference_no || ''}">
-                                                        </td>
-                                                        <td class="px-6 py-3">
-                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                                name="month_name_${i}" value="${w.month_name || ''}">
-                                                        </td>
-                                                        <td class="px-6 py-3">
-                                                            <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                                name="covered_year_${i}" value="${w.covered_year || ''}">
-                                                        </td>
-                                                        <td class="px-6 py-3">
-                                                            <input type="number" step="any" min="0" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
-                                                                name="amount_withdrawn_${i}" value="${w.amount_withdrawn || ''}">
-                                                        </td>
-                                                    </tr>
-                                                `;
+                                                            <tr data-withdrawals-id="${w.withdrawals_id}">
+                                                                <td class="px-6 py-3">
+                                                                    <input type="date" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                        name="date_of_withdrawal_${i}" value="${w.date_of_withdrawal || ''}">
+                                                                </td>
+                                                                <td class="px-6 py-3">
+                                                                    <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                        name="reference_no_${i}" value="${w.reference_no || ''}">
+                                                                </td>
+                                                                <td class="px-6 py-3">
+                                                                    <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                        name="month_name_${i}" value="${w.month_name || ''}">
+                                                                </td>
+                                                                <td class="px-6 py-3">
+                                                                    <input type="text" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                        name="covered_year_${i}" value="${w.covered_year || ''}">
+                                                                </td>
+                                                                <td class="px-6 py-3">
+                                                                    <input type="number" step="any" min="0" class="w-full rounded-lg border border-[#dce5e0] dark:border-[#2a3a32] bg-white dark:bg-[#112119] text-sm py-2 px-3"
+                                                                        name="amount_withdrawn_${i}" value="${w.amount_withdrawn || ''}">
+                                                                </td>
+                                                            </tr>
+                                                        `;
                                 });
                             } else {
                                 html += `
-                                                <tr>
-                                                    <td colspan="5" class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
-                                                        No withdrawals found
-                                                    </td>
-                                                </tr>
-                                            `;
+                                                        <tr>
+                                                            <td colspan="5" class="px-6 py-10 text-center text-sm font-bold text-[#638875] dark:text-[#a0b0a8]">
+                                                                No withdrawals found
+                                                            </td>
+                                                        </tr>
+                                                    `;
                             }
 
                             html += `
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
 
-                                            <div class="mt-4 flex justify-end">
-                                                <button class="rounded-lg bg-[#112119] dark:bg-white text-white dark:text-[#112119] px-5 py-2.5 text-sm font-black hover:opacity-90"
-                                                    id="saveWithdrawChangesBtn">
-                                                    Save Changes
-                                                </button>
-                                            </div>
-                                        `;
+                                                    <div class="mt-4 flex justify-end">
+                                                        <button class="rounded-lg bg-[#112119] dark:bg-white text-white dark:text-[#112119] px-5 py-2.5 text-sm font-black hover:opacity-90"
+                                                            id="saveWithdrawChangesBtn">
+                                                            Save Changes
+                                                        </button>
+                                                    </div>
+                                                `;
 
                             result.innerHTML = html;
                         })

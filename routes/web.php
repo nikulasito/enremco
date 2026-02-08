@@ -163,10 +163,14 @@ Route::get('/admin/get-co-maker/{name}', [LoansController::class, 'getCoMakerDet
 Route::patch('/admin/loans/update', [LoansController::class, 'updateLoan'])->name('admin.update-loan');
 Route::get('/admin/loan-payments', [LoanPaymentController::class, 'loanPayments'])->name('admin.loan-payments');
 Route::post('/admin/loan-payments/store', [LoanPaymentController::class, 'storeLoanPayment'])->name('admin.store-loan-payment');
-Route::post('/admin/loan-payments/store-bulk', [LoanPaymentController::class, 'storeBulkLoanPayments']);
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::post('loan-payments/store-bulk', [LoanPaymentController::class, 'storeBulkLoanPayments'])
+        ->name('admin.loan-payments.store-bulk');
+});
 Route::post('/admin/loan-payments/update', [LoanPaymentController::class, 'updateLoanPayment'])->name('admin.loan-payments.update');
 Route::get('/admin/loan-payments/remittance/{remittanceNo}/{loanId}', [LoanPaymentController::class, 'getByRemittance']);
-
+Route::get('/admin/loan-payments/view/{loanId}', [LoanPaymentController::class, 'viewLoan'])
+    ->name('admin.loan-payments.view');
 Route::get('/download/loans-template', [LoansController::class, 'downloadTemplate']);
 Route::post('/admin/upload-loans-template', [LoansController::class, 'uploadLoanTemplate'])->name('admin.upload-loans-template');
 

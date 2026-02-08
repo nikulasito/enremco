@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Models\LoanPayment;
 
 class LoanDetail extends Model
 {
@@ -16,11 +17,29 @@ class LoanDetail extends Model
     protected $keyType = 'string';  // Ensure `loan_id` is treated as a string
 
     protected $fillable = [
-        'loan_id', 'employee_ID', 'loan_type', 'loan_amount', 'interest_rate',
-        'date_applied', 'date_approved', 'total_net', 'terms', 'monthly_payment',
-        'first_payment', 'last_payment', 'remarks', 'total_deduction', 'old_balance',
-        'lpp', 'handling_fee', 'petty_cash_loan', 'co_maker_name', 'co_maker_position',
-        'co_maker2_name', 'co_maker2_position', 'interest'
+        'loan_id',
+        'employee_ID',
+        'loan_type',
+        'loan_amount',
+        'interest_rate',
+        'date_applied',
+        'date_approved',
+        'total_net',
+        'terms',
+        'monthly_payment',
+        'first_payment',
+        'last_payment',
+        'remarks',
+        'total_deduction',
+        'old_balance',
+        'lpp',
+        'handling_fee',
+        'petty_cash_loan',
+        'co_maker_name',
+        'co_maker_position',
+        'co_maker2_name',
+        'co_maker2_position',
+        'interest'
     ];
 
     public function user()
@@ -52,6 +71,7 @@ class LoanDetail extends Model
 
     public function latestPayment()
     {
-        return $this->hasOne(LoanPayment::class, 'loan_id', 'loan_id')->latestOfMany();
+        return $this->hasOne(LoanPayment::class, 'loan_id', 'loan_id')
+            ->latestOfMany('date_of_remittance');
     }
 }

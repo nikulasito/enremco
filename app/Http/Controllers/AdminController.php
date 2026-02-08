@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;   // for Brevo API call
 use Illuminate\Support\Facades\Log;    // for Log::error / w
 use App\Models\User;
+use App\Models\LoanDetail;
+use App\Models\LoanPayment;
 use Illuminate\Support\Facades\Schema;
 
 
@@ -462,7 +464,15 @@ class AdminController extends Controller
 
     public function loans()
     {
-        $loans = LoanDetail::with('user')->get(); // Fetch loans with user data
+        $loans = LoanDetail::with('user')
+            ->withSum('loanPayments as total_payments_sum', 'total_payments')
+            ->addSelect([
+                'latest_outstanding_balance' => LoanPayment::select('outstanding_balance')
+                    ->whereColumn('loan_payments.loan_id', 'loan_details.loan_id')
+                    ->orderByDesc('date_of_remittance')
+                    ->limit(1)
+            ])
+            ->get();
         return view('admin.loans', compact('loans'));
     }
 
